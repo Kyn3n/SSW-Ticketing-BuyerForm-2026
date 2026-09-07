@@ -1,0 +1,8 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+prisma/contract.json linguist-generated
+prisma/contract.d.ts linguist-generated
+prisma/ops.json linguist-generated
+prisma/migration.json linguist-generated
+migrations/snapshots/**/contract.json linguist-generated
+migrations/snapshots/**/contract.d.ts linguist-generated
