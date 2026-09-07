@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SSW Ticketing 2026
 
-## Getting Started
+A local mock of the buyer ticket-purchase flow. It uses a decoupled receipt
+upload followed by order creation, matching the planned Cloud Storage flow
+without requiring GCP services.
 
-First, run the development server:
+## Getting started
+
+Install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Submitted receipts are written to `public/mock-bucket/`. Validated orders are
+appended to `data/mock-orders.json` with a `pending` status. Both runtime
+locations are ignored by Git.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+For local use, upload URLs are signed with a fallback mock secret and expire
+after ten minutes. Set `MOCK_UPLOAD_SECRET` when you want a custom local secret.
 
-## Learn More
+## Mock API flow
 
-To learn more about Next.js, take a look at the following resources:
+1. `POST /api/orders/initiate-upload` validates file metadata and returns a
+   temporary upload URL.
+2. `PUT /api/mock-bucket/:referenceId` accepts the raw image body and returns
+   its mock object path.
+3. `POST /api/orders/create` validates the buyer data and receipt, logs the
+   payload, and persists the pending order.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```
