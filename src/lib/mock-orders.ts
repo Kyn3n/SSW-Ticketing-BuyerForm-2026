@@ -9,7 +9,17 @@ export type MockOrder = {
   name: string;
   email: string;
   phone: string;
+  ticketSelections: Record<
+    "normal" | "vip",
+    {
+      singleCount: number;
+      bundleCount: number;
+      seatCount: number;
+      subtotal: number;
+    }
+  >;
   seatCount: number;
+  amount: number;
   receiptPath: string;
   uploadReference: string;
   status: "pending";

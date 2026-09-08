@@ -6,14 +6,33 @@ import {
   type FormEvent,
   useId,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
-const TICKET_PRICE = 120;
+const TICKET_TYPES = {
+  normal: { label: "Normal", price: 40 },
+  vip: { label: "VIP", price: 60 },
+} as const;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type SubmissionStage = "idle" | "preparing" | "uploading" | "creating";
+type TicketType = keyof typeof TICKET_TYPES;
+type TicketCounts = {
+  singleCount: number;
+  bundleCount: number;
+};
+type TicketSelections = Record<TicketType, TicketCounts>;
+type TicketLine = TicketCounts & {
+  seatCount: number;
+  subtotal: number;
+};
+type SavingsOpportunity = {
+  bundleCount: number;
+  singlesConverted: number;
+  savings: number;
+};
 
 type InitiateUploadResponse = {
   referenceId: string;
@@ -31,6 +50,9 @@ type CreateOrderResponse = {
     reference: string;
     status: "pending";
     createdAt: string;
+    ticketSelections: Record<TicketType, TicketLine>;
+    seatCount: number;
+    amount: number;
   };
 };
 
@@ -78,19 +100,132 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+type QuantityControlProps = {
+  label: string;
+  description: string;
+  value: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  disableDecrease: boolean;
+  disableIncrease: boolean;
+};
+
+function QuantityControl({
+  label,
+  description,
+  value,
+  onDecrease,
+  onIncrease,
+  disableDecrease,
+  disableIncrease,
+}: QuantityControlProps) {
+  return (
+    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-white/80">{label}</p>
+        <p className="mt-1 text-xs text-white/40">{description}</p>
+      </div>
+      <div className="flex h-11 items-center self-end overflow-hidden rounded-md border border-white/15 bg-[#121a25]">
+        <button
+          type="button"
+          aria-label={`Decrease ${label.toLowerCase()}`}
+          onClick={onDecrease}
+          disabled={disableDecrease}
+          className="h-full w-11 text-xl text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:text-white/20 focus-visible:outline-2 focus-visible:outline-[#c59042]"
+        >
+          &minus;
+        </button>
+        <output className="flex h-full min-w-12 items-center justify-center border-x border-white/15 font-mono text-sm font-semibold text-white">
+          {value}
+        </output>
+        <button
+          type="button"
+          aria-label={`Increase ${label.toLowerCase()}`}
+          onClick={onIncrease}
+          disabled={disableIncrease}
+          className="h-full w-11 text-xl text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:text-white/20 focus-visible:outline-2 focus-visible:outline-[#c59042]"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function BuyerTicketForm() {
   const fileInputId = useId();
-  const [seatCount, setSeatCount] = useState(1);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [ticketSelections, setTicketSelections] = useState<TicketSelections>({
+    normal: { singleCount: 1, bundleCount: 0 },
+    vip: { singleCount: 0, bundleCount: 0 },
+  });
   const [receipt, setReceipt] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [stage, setStage] = useState<SubmissionStage>("idle");
   const [isDragging, setIsDragging] = useState(false);
+  const [showSavingsConfirmation, setShowSavingsConfirmation] = useState(false);
   const [completedOrder, setCompletedOrder] =
     useState<CreateOrderResponse["order"] | null>(null);
 
-  const total = useMemo(() => seatCount * TICKET_PRICE, [seatCount]);
+  const ticketLines = useMemo(
+    () =>
+      Object.fromEntries(
+        (Object.keys(TICKET_TYPES) as TicketType[]).map((type) => {
+          const selection = ticketSelections[type];
+          return [
+            type,
+            {
+              ...selection,
+              seatCount: selection.singleCount + selection.bundleCount * 4,
+              subtotal:
+                (selection.singleCount + selection.bundleCount * 3) *
+                TICKET_TYPES[type].price,
+            },
+          ];
+        }),
+      ) as Record<TicketType, TicketLine>,
+    [ticketSelections],
+  );
+  const seatCount = ticketLines.normal.seatCount + ticketLines.vip.seatCount;
+  const total = ticketLines.normal.subtotal + ticketLines.vip.subtotal;
+  const savingsOpportunities = useMemo(
+    () =>
+      Object.fromEntries(
+        (Object.keys(TICKET_TYPES) as TicketType[]).map((type) => {
+          const bundleCount = Math.floor(
+            ticketSelections[type].singleCount / 4,
+          );
+
+          return [
+            type,
+            {
+              bundleCount,
+              singlesConverted: bundleCount * 4,
+              savings: bundleCount * TICKET_TYPES[type].price,
+            },
+          ];
+        }),
+      ) as Record<TicketType, SavingsOpportunity>,
+    [ticketSelections],
+  );
+  const availableSavings =
+    savingsOpportunities.normal.savings + savingsOpportunities.vip.savings;
   const isSubmitting = stage !== "idle";
+
+  function updateTicketCount(
+    type: TicketType,
+    field: keyof TicketCounts,
+    change: -1 | 1,
+  ) {
+    setTicketSelections((current) => ({
+      ...current,
+      [type]: {
+        ...current[type],
+        [field]: current[type][field] + change,
+      },
+    }));
+  }
 
   function chooseReceipt(file: File | undefined) {
     if (!file) return;
@@ -110,16 +245,13 @@ export function BuyerTicketForm() {
     chooseReceipt(event.dataTransfer.files?.[0]);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(null);
-
+  async function submitOrder(formElement: HTMLFormElement) {
     if (!receipt) {
       setFileError("Add your payment receipt before submitting.");
       return;
     }
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
 
     try {
       setStage("preparing");
@@ -152,7 +284,7 @@ export function BuyerTicketForm() {
           name: form.get("name"),
           email: form.get("email"),
           phone: form.get("phone"),
-          seatCount,
+          ticketSelections,
           receiptPath: uploadedFile.objectPath,
           uploadReference: uploadDetails.referenceId,
         }),
@@ -165,6 +297,50 @@ export function BuyerTicketForm() {
       );
     } finally {
       setStage("idle");
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+
+    if (!receipt) {
+      setFileError("Add your payment receipt before submitting.");
+      return;
+    }
+
+    if (availableSavings > 0) {
+      setShowSavingsConfirmation(true);
+      return;
+    }
+
+    void submitOrder(event.currentTarget);
+  }
+
+  function applyBundleSavings() {
+    setTicketSelections((current) =>
+      Object.fromEntries(
+        (Object.keys(TICKET_TYPES) as TicketType[]).map((type) => {
+          const bundlesToAdd = Math.floor(current[type].singleCount / 4);
+
+          return [
+            type,
+            {
+              singleCount: current[type].singleCount % 4,
+              bundleCount: current[type].bundleCount + bundlesToAdd,
+            },
+          ];
+        }),
+      ) as TicketSelections,
+    );
+    setShowSavingsConfirmation(false);
+  }
+
+  function continueWithoutSavings() {
+    setShowSavingsConfirmation(false);
+
+    if (formRef.current) {
+      void submitOrder(formRef.current);
     }
   }
 
@@ -197,6 +373,44 @@ export function BuyerTicketForm() {
               <dt className="text-sm text-white/55">Status</dt>
               <dd className="text-sm font-medium text-white">Pending review</dd>
             </div>
+            <div className="py-4">
+              <dt className="mb-3 text-sm text-white/55">Ticket breakdown</dt>
+              <dd className="space-y-3">
+                {(
+                  Object.entries(completedOrder.ticketSelections) as [
+                    TicketType,
+                    TicketLine,
+                  ][]
+                )
+                  .filter(([, line]) => line.seatCount > 0)
+                  .map(([type, line]) => (
+                    <div
+                      key={type}
+                      className="flex items-start justify-between gap-6"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {TICKET_TYPES[type].label} &middot; {line.seatCount}{" "}
+                          {line.seatCount === 1 ? "ticket" : "tickets"}
+                        </p>
+                        <p className="mt-1 text-xs text-white/40">
+                          {line.singleCount} single, {line.bundleCount}{" "}
+                          {line.bundleCount === 1 ? "bundle" : "bundles"}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-white">
+                        RM {line.subtotal.toLocaleString("en-MY")}
+                      </p>
+                    </div>
+                  ))}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-6 py-4">
+              <dt className="text-sm text-white/55">Amount submitted</dt>
+              <dd className="text-sm font-semibold text-[#e1b66e]">
+                RM {completedOrder.amount.toLocaleString("en-MY")}
+              </dd>
+            </div>
           </dl>
 
           <button
@@ -204,7 +418,10 @@ export function BuyerTicketForm() {
             onClick={() => {
               setCompletedOrder(null);
               setReceipt(null);
-              setSeatCount(1);
+              setTicketSelections({
+                normal: { singleCount: 1, bundleCount: 0 },
+                vip: { singleCount: 0, bundleCount: 0 },
+              });
             }}
             className="mt-8 min-h-11 rounded-md border border-white/20 px-5 text-sm font-semibold text-white transition hover:border-[#c59042] hover:text-[#e1b66e] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c59042]"
           >
@@ -294,15 +511,132 @@ export function BuyerTicketForm() {
                   Buyer details
                 </h2>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-white/45">Price per seat</p>
-                <p className="mt-1 text-base font-semibold text-white">
-                  RM {TICKET_PRICE}
-                </p>
-              </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-7">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-7">
+              <fieldset className="border-y border-white/10 py-6">
+                <legend className="sr-only">Ticket selection</legend>
+                <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-white/80">
+                      Ticket selection
+                    </p>
+                    <p className="mt-1 text-xs text-white/40">
+                      Mix Normal and VIP tickets in one order.
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mb-6 border-l-2 border-[#c59042] pl-3 text-xs leading-5 text-white/50">
+                  Choose singles for an exact quantity, or add bundles to save
+                  the price of one ticket for every 4 tickets.
+                </p>
+
+                <div className="divide-y divide-white/10">
+                  {(
+                    Object.entries(TICKET_TYPES) as [
+                      TicketType,
+                      (typeof TICKET_TYPES)[TicketType],
+                    ][]
+                  ).map(([type, ticket]) => {
+                    const line = ticketLines[type];
+
+                    return (
+                      <section key={type} className="py-6 first:pt-0 last:pb-0">
+                        <div className="mb-5 flex items-center justify-between gap-4">
+                          <div>
+                            <h3 className="text-base font-medium text-white">
+                              {ticket.label}
+                            </h3>
+                            <p className="mt-1 text-xs text-white/40">
+                              RM {ticket.price} per paid ticket
+                            </p>
+                          </div>
+                          <p className="text-right">
+                            <span className="block text-xs text-white/40">
+                              Subtotal
+                            </span>
+                            <span className="text-base font-semibold text-[#e1b66e]">
+                              RM {line.subtotal.toLocaleString("en-MY")}
+                            </span>
+                          </p>
+                        </div>
+
+                        <div className="space-y-5">
+                          <QuantityControl
+                            label={`${ticket.label} singles`}
+                            description={`RM ${ticket.price} each`}
+                            value={line.singleCount}
+                            onDecrease={() =>
+                              updateTicketCount(type, "singleCount", -1)
+                            }
+                            onIncrease={() =>
+                              updateTicketCount(type, "singleCount", 1)
+                            }
+                            disableDecrease={
+                              line.singleCount === 0 ||
+                              seatCount === 1 ||
+                              isSubmitting
+                            }
+                            disableIncrease={isSubmitting}
+                          />
+                          <QuantityControl
+                            label={`${ticket.label} bundle`}
+                            description={`4 tickets for RM ${(
+                              ticket.price * 3
+                            ).toLocaleString("en-MY")} (save RM ${ticket.price})`}
+                            value={line.bundleCount}
+                            onDecrease={() =>
+                              updateTicketCount(type, "bundleCount", -1)
+                            }
+                            onIncrease={() =>
+                              updateTicketCount(type, "bundleCount", 1)
+                            }
+                            disableDecrease={
+                              line.bundleCount === 0 ||
+                              seatCount === 4 ||
+                              isSubmitting
+                            }
+                            disableIncrease={isSubmitting}
+                          />
+                        </div>
+
+                        {savingsOpportunities[type].bundleCount > 0 && (
+                          <p
+                            aria-live="polite"
+                            className="mt-4 border-l-2 border-[#c59042] pl-3 text-xs leading-5 text-[#e1b66e]"
+                          >
+                            Switch {savingsOpportunities[type].singlesConverted}{" "}
+                            singles to {savingsOpportunities[type].bundleCount}{" "}
+                            {savingsOpportunities[type].bundleCount === 1
+                              ? "bundle"
+                              : "bundles"}{" "}
+                            and save RM {savingsOpportunities[type].savings}.
+                          </p>
+                        )}
+
+                        <p className="mt-4 text-right text-xs text-white/45">
+                          {line.seatCount}{" "}
+                          {line.seatCount === 1 ? "ticket" : "tickets"}
+                        </p>
+                      </section>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-6 flex items-center justify-between gap-4 border-t border-white/10 pt-5">
+                  <p className="text-sm text-white/55">
+                    {seatCount} {seatCount === 1 ? "ticket" : "tickets"} total
+                  </p>
+                  <output
+                    aria-live="polite"
+                    className="text-lg font-semibold text-white"
+                  >
+                    RM {total.toLocaleString("en-MY")}
+                  </output>
+                </div>
+              </fieldset>
+
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
                   <span className="mb-2 block text-sm font-medium text-white/80">
@@ -350,41 +684,6 @@ export function BuyerTicketForm() {
                     className="min-h-12 w-full rounded-md border border-white/15 bg-[#121a25] px-4 text-base text-white outline-none transition placeholder:text-white/25 focus:border-[#c59042] focus:ring-2 focus:ring-[#c59042]/25"
                   />
                 </label>
-              </div>
-
-              <div className="border-y border-white/10 py-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-white/80">Seat quantity</p>
-                    <p className="mt-1 text-xs text-white/40">Maximum 10 per order</p>
-                  </div>
-                  <div className="flex h-11 items-center overflow-hidden rounded-md border border-white/15 bg-[#121a25]">
-                    <button
-                      type="button"
-                      aria-label="Decrease seat quantity"
-                      onClick={() => setSeatCount((value) => Math.max(1, value - 1))}
-                      disabled={seatCount === 1 || isSubmitting}
-                      className="h-full w-11 text-xl text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:text-white/20 focus-visible:outline-2 focus-visible:outline-[#c59042]"
-                    >
-                      &minus;
-                    </button>
-                    <output
-                      aria-live="polite"
-                      className="flex h-full min-w-12 items-center justify-center border-x border-white/15 font-mono text-sm font-semibold text-white"
-                    >
-                      {seatCount}
-                    </output>
-                    <button
-                      type="button"
-                      aria-label="Increase seat quantity"
-                      onClick={() => setSeatCount((value) => Math.min(10, value + 1))}
-                      disabled={seatCount === 10 || isSubmitting}
-                      className="h-full w-11 text-xl text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:text-white/20 focus-visible:outline-2 focus-visible:outline-[#c59042]"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <section aria-labelledby="payment-heading">
@@ -517,6 +816,96 @@ export function BuyerTicketForm() {
           </section>
         </div>
       </div>
+
+      {showSavingsConfirmation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) {
+              setShowSavingsConfirmation(false);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="savings-dialog-title"
+            aria-describedby="savings-dialog-description"
+            className="relative w-full max-w-md rounded-lg border border-white/15 bg-[#172231] p-6 shadow-2xl shadow-black/40 sm:p-8"
+          >
+            <button
+              type="button"
+              aria-label="Close savings reminder"
+              title="Close"
+              onClick={() => setShowSavingsConfirmation(false)}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-md text-xl text-white/55 transition hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-[#c59042]"
+            >
+              &times;
+            </button>
+
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#c59042]">
+              Bundle savings available
+            </p>
+            <h2
+              id="savings-dialog-title"
+              className="mt-2 pr-10 text-2xl font-medium text-white"
+            >
+              Save RM {availableSavings.toLocaleString("en-MY")}
+            </h2>
+            <p
+              id="savings-dialog-description"
+              className="mt-3 text-sm leading-6 text-white/60"
+            >
+              Keep the same number of tickets by switching eligible singles to
+              bundle deals.
+            </p>
+
+            <ul className="mt-5 divide-y divide-white/10 border-y border-white/10">
+              {(Object.keys(TICKET_TYPES) as TicketType[])
+                .filter(
+                  (type) => savingsOpportunities[type].bundleCount > 0,
+                )
+                .map((type) => (
+                  <li
+                    key={type}
+                    className="flex items-start justify-between gap-4 py-3 text-sm"
+                  >
+                    <span className="text-white/65">
+                      {TICKET_TYPES[type].label}: switch{" "}
+                      {savingsOpportunities[type].singlesConverted} singles to{" "}
+                      {savingsOpportunities[type].bundleCount}{" "}
+                      {savingsOpportunities[type].bundleCount === 1
+                        ? "bundle"
+                        : "bundles"}
+                    </span>
+                    <span className="shrink-0 font-semibold text-[#e1b66e]">
+                      Save RM {savingsOpportunities[type].savings}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+              <button
+                type="button"
+                autoFocus
+                onClick={applyBundleSavings}
+                className="min-h-11 flex-1 rounded-md bg-[#c59042] px-4 text-sm font-bold text-[#121a25] transition hover:bg-[#d7a95f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c59042]"
+              >
+                Use bundle savings
+              </button>
+              <button
+                type="button"
+                onClick={continueWithoutSavings}
+                className="min-h-11 flex-1 rounded-md border border-white/20 px-4 text-sm font-semibold text-white transition hover:border-[#c59042] hover:text-[#e1b66e] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c59042]"
+              >
+                Continue anyway
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

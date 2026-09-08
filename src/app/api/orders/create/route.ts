@@ -14,7 +14,16 @@ const orderSchema = z.object({
     .min(7)
     .max(24)
     .regex(/^[+()\-\s\d]+$/, "Enter a valid phone number."),
-  seatCount: z.number().int().min(1).max(10),
+  ticketSelections: z.object({
+    normal: z.object({
+      singleCount: z.number().int().min(0),
+      bundleCount: z.number().int().min(0),
+    }),
+    vip: z.object({
+      singleCount: z.number().int().min(0),
+      bundleCount: z.number().int().min(0),
+    }),
+  }),
   receiptPath: z
     .string()
     .regex(/^\/mock-bucket\/[0-9a-f-]{36}\.(jpg|png|webp)$/),
@@ -46,6 +55,49 @@ export async function POST(request: Request) {
     );
   }
 
+  const ticketSelections = {
+    normal: {
+      ...result.data.ticketSelections.normal,
+      seatCount:
+        result.data.ticketSelections.normal.singleCount +
+        result.data.ticketSelections.normal.bundleCount * 4,
+      subtotal:
+        (result.data.ticketSelections.normal.singleCount +
+          result.data.ticketSelections.normal.bundleCount * 3) *
+        40,
+    },
+    vip: {
+      ...result.data.ticketSelections.vip,
+      seatCount:
+        result.data.ticketSelections.vip.singleCount +
+        result.data.ticketSelections.vip.bundleCount * 4,
+      subtotal:
+        (result.data.ticketSelections.vip.singleCount +
+          result.data.ticketSelections.vip.bundleCount * 3) *
+        60,
+    },
+  };
+  const seatCount =
+    ticketSelections.normal.seatCount + ticketSelections.vip.seatCount;
+  const amount =
+    ticketSelections.normal.subtotal + ticketSelections.vip.subtotal;
+
+  const hasSafeTotals = [
+    ticketSelections.normal.seatCount,
+    ticketSelections.normal.subtotal,
+    ticketSelections.vip.seatCount,
+    ticketSelections.vip.subtotal,
+    seatCount,
+    amount,
+  ].every(Number.isSafeInteger);
+
+  if (seatCount === 0 || !hasSafeTotals) {
+    return NextResponse.json(
+      { error: "The selected ticket quantity or total is invalid." },
+      { status: 400 },
+    );
+  }
+
   const receiptFile = path.join(
     process.cwd(),
     "public",
@@ -66,7 +118,14 @@ export async function POST(request: Request) {
   const order: MockOrder = {
     id,
     reference: createReference(id),
-    ...result.data,
+    name: result.data.name,
+    email: result.data.email,
+    phone: result.data.phone,
+    ticketSelections,
+    seatCount,
+    amount,
+    receiptPath: result.data.receiptPath,
+    uploadReference: result.data.uploadReference,
     status: "pending",
     createdAt: new Date().toISOString(),
   };
@@ -81,6 +140,9 @@ export async function POST(request: Request) {
         reference: order.reference,
         status: order.status,
         createdAt: order.createdAt,
+        ticketSelections: order.ticketSelections,
+        seatCount: order.seatCount,
+        amount: order.amount,
       },
     },
     { status: 201 },
