@@ -7,22 +7,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "contract:emit": "prisma contract emit",
-    "migration:check": "prisma migration check",
-    "db:migrate": "prisma db migrate",
-    "db:verify": "prisma db verify"
+    "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/orm-postgres": "^8.0.0-rc.8",
-    "dotenv": "^17.4.2",
+    "@astryxdesign/cli": "^0.6.0",
+    "@astryxdesign/core": "^0.6.0",
+    "@astryxdesign/theme-neutral": "^0.6.0",
+    "@stylexjs/stylex": "^0.19.0",
     "next": "16.3.3",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "zod": "^4.5.2"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@prisma/cli-engine": "^0.2.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -30,9 +26,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
-    "prisma": "^8.0.0-rc.12",
     "tailwindcss": "^4",
-    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   }
 }
