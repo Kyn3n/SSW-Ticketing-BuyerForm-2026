@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Stack, Text } from "@astryxdesign/core";
-import { useThemeMode } from "@/components/providers";
+import { useThemeMode } from "@/providers/theme-mode-provider";
 
 /**
  * Brand row that sits over the hero photo: mark, wordmark, and the mode
