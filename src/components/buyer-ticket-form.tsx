@@ -1,17 +1,25 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
-import { Banner, Card, Section, Stack, Text } from "@astryxdesign/core";
-import {
-  validateBuyerDetails,
-  type BuyerFieldErrors,
-} from "@/lib/buyer-validation";
+import { useMemo, useRef, useState, type FormEvent } from "react";
+import { Section, Stack, useToast } from "@astryxdesign/core";
+import type { BuyerFieldErrors } from "@/lib/buyer-validation";
 import {
   submitOrder,
   type BuyerDetails,
   type CompletedOrder,
   type SubmissionStage,
 } from "@/lib/orders";
+import {
+  completedSteps,
+  hasStepErrors,
+  NO_STEP_ERRORS,
+  stepIndex,
+  STEPS,
+  validateStep,
+  type StepDraft,
+  type StepErrors,
+  type StepId,
+} from "@/lib/steps";
 import {
   INITIAL_TICKET_SELECTIONS,
   sumSeats,
@@ -24,29 +32,41 @@ import {
   type TicketType,
 } from "@/lib/tickets";
 import { BrandHeader } from "./brand-header";
-import { BuyerDetailsFields } from "./buyer-details-fields";
-import { EventPanel } from "./event-panel";
-import { Eyebrow } from "./eyebrow";
-import { HeroParallax, HERO_HEIGHT, HERO_OVERLAP } from "./hero-parallax";
+import { HeroParallax } from "./hero-parallax";
+import { IntroStep } from "./intro-step";
 import { OrderConfirmation } from "./order-confirmation";
-import { PaymentPanel } from "./payment-panel";
+import { PaymentStep } from "./payment-step";
+import { PersonalInfoStep } from "./personal-info-step";
 import { SavingsDialog } from "./savings-dialog";
-import { SubmitBar } from "./submit-bar";
-import { TicketSelection } from "./ticket-selection";
+import { SeatsStep } from "./seats-step";
+import { StepNav } from "./step-nav";
+import { StepPanel } from "./step-panel";
+import { StepTabs } from "./step-tabs";
+import { useScrollHandoff } from "./use-scroll-handoff";
 
 const EMPTY_BUYER_DETAILS: BuyerDetails = { name: "", email: "", phone: "" };
-const PANEL_MAX_WIDTH = 1024;
+const PANEL_MAX_WIDTH = 860;
 
 export function BuyerTicketForm() {
+  const showToast = useToast();
+  const pageRef = useRef<HTMLElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useScrollHandoff({ pageRef, heroRef, sheetRef, panelRef });
+
+  const [activeStep, setActiveStep] = useState<StepId>("intro");
+  const [furthestVisited, setFurthestVisited] = useState(0);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
+
   const [buyerDetails, setBuyerDetails] =
     useState<BuyerDetails>(EMPTY_BUYER_DETAILS);
-  const [fieldErrors, setFieldErrors] = useState<BuyerFieldErrors>({});
   const [ticketSelections, setTicketSelections] = useState<TicketSelections>(
     INITIAL_TICKET_SELECTIONS,
   );
   const [receipt, setReceipt] = useState<File | null>(null);
-  const [receiptError, setReceiptError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<StepErrors>(NO_STEP_ERRORS);
   const [stage, setStage] = useState<SubmissionStage>("idle");
   const [showSavingsConfirmation, setShowSavingsConfirmation] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(
@@ -67,6 +87,45 @@ export function BuyerTicketForm() {
     savingsOpportunities.normal.savings + savingsOpportunities.vip.savings;
   const isSubmitting = stage !== "idle";
 
+  const draft: StepDraft = { buyerDetails, seatCount, receipt };
+  const currentIndex = stepIndex(activeStep);
+  const currentStep = STEPS[currentIndex];
+  const previousStep = STEPS[currentIndex - 1];
+  const nextStep = STEPS[currentIndex + 1];
+  const completed = useMemo(
+    () => completedSteps({ buyerDetails, seatCount, receipt }),
+    [buyerDetails, seatCount, receipt],
+  );
+
+  function goToStep(id: StepId, travel: "forward" | "back") {
+    setDirection(travel);
+    setActiveStep(id);
+    setFurthestVisited((furthest) => Math.max(furthest, stepIndex(id)));
+    // Bring the top of the panel back into view; the hero is tall enough that
+    // a late step would otherwise open scrolled past its own heading.
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /**
+   * Tabs are a shortcut, not a bypass: stepping back is always free, but
+   * jumping ahead still has to clear the step you are standing on.
+   */
+  function handleTabSelect(id: StepId) {
+    const target = stepIndex(id);
+    if (target === currentIndex) return;
+
+    if (target < currentIndex) {
+      goToStep(id, "back");
+      return;
+    }
+
+    const stepErrors = validateStep(activeStep, draft);
+    setErrors(stepErrors);
+    if (hasStepErrors(stepErrors)) return;
+
+    goToStep(id, "forward");
+  }
+
   function updateTicketCount(
     type: TicketType,
     field: keyof TicketCounts,
@@ -76,11 +135,15 @@ export function BuyerTicketForm() {
       ...current,
       [type]: { ...current[type], [field]: Math.max(0, value) },
     }));
+    setErrors((current) => ({ ...current, seats: null }));
   }
 
   function updateBuyerField(field: keyof BuyerDetails, value: string) {
     setBuyerDetails((current) => ({ ...current, [field]: value }));
-    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setErrors((current) => ({
+      ...current,
+      buyer: { ...current.buyer, [field]: undefined } as BuyerFieldErrors,
+    }));
   }
 
   function resetForm() {
@@ -88,48 +151,53 @@ export function BuyerTicketForm() {
     setBuyerDetails(EMPTY_BUYER_DETAILS);
     setTicketSelections(INITIAL_TICKET_SELECTIONS);
     setReceipt(null);
-    setReceiptError(null);
-    setFieldErrors({});
-    setFormError(null);
+    setErrors(NO_STEP_ERRORS);
+    setActiveStep("intro");
+    setFurthestVisited(0);
+    setDirection("forward");
   }
 
   async function sendOrder() {
-    if (!receipt) {
-      setReceiptError("Add your payment receipt before submitting.");
-      return;
-    }
-
     try {
       const order = await submitOrder({
         buyerDetails,
         ticketSelections,
-        receipt,
+        receipt: receipt as File,
         onStageChange: setStage,
       });
       setCompletedOrder(order);
     } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Unable to submit your order.",
-      );
+      // Everything the buyer typed stays exactly where it is — the toast is
+      // the only thing that changes, so they can retry without re-entering.
+      showToast({
+        type: "error",
+        body:
+          error instanceof Error
+            ? error.message
+            : "Unable to submit your order. Please try again.",
+        isAutoHide: false,
+      });
     } finally {
       setStage("idle");
     }
   }
 
+  /**
+   * The nav's forward button is the form's submit button, so this runs on
+   * every step: validate what this step owns, then either advance or submit.
+   */
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFormError(null);
 
-    const errors = validateBuyerDetails(buyerDetails);
-    setFieldErrors(errors);
-    if (Object.values(errors).some(Boolean)) return;
+    const stepErrors = validateStep(activeStep, draft);
+    setErrors(stepErrors);
+    if (hasStepErrors(stepErrors)) return;
 
-    if (!receipt) {
-      setReceiptError("Add your payment receipt before submitting.");
+    if (nextStep) {
+      goToStep(nextStep.id, "forward");
       return;
     }
 
-    // Offer the cheaper equivalent basket before taking the payment.
     if (availableSavings > 0) {
       setShowSavingsConfirmation(true);
       return;
@@ -157,8 +225,8 @@ export function BuyerTicketForm() {
   }
 
   return (
-    <main className="ssw-page">
-      <HeroParallax />
+    <main className="ssw-page" ref={pageRef}>
+      <HeroParallax ref={heroRef} />
 
       <div className="ssw-scroller">
         <Stack
@@ -167,80 +235,91 @@ export function BuyerTicketForm() {
           justify="start"
           paddingInline={5}
           paddingBlock={6}
-          style={{ minHeight: HERO_HEIGHT - HERO_OVERLAP }}
+          className="ssw-hero-spacer"
         >
           <BrandHeader />
         </Stack>
 
-        <div className="ssw-sheet">
+        <div className="ssw-sheet" ref={sheetRef}>
           <Stack direction="vertical" hAlign="center">
-            <Card
-              padding={0}
-              width="100%"
-              maxWidth={PANEL_MAX_WIDTH}
-              elevation="high"
-              style={{ overflow: "hidden" }}
+            <div
+              ref={panelRef}
+              className="ssw-folder"
+              style={{ maxWidth: PANEL_MAX_WIDTH }}
             >
-              <div className="ssw-panel-grid">
-                <EventPanel />
+              <StepTabs
+                activeStep={activeStep}
+                completed={completed}
+                furthestVisited={furthestVisited}
+                onSelect={handleTabSelect}
+              />
 
-                <Stack direction="vertical" gap={6} padding={8} as="section">
-                  <Stack direction="vertical" gap={1}>
-                    <Eyebrow>Ticket order</Eyebrow>
-                    <Text type="display-3" as="h2">
-                      Buyer details
-                    </Text>
-                  </Stack>
+              {/*
+                * Not an Astryx Card: the folder body has to share an exact
+                * edge with the tabs sitting on it, and Card's StyleX border
+                * and corners cannot be overridden from a stylesheet.
+                */}
+              <div className="ssw-folder__body">
+                <form onSubmit={handleSubmit} noValidate>
+                  <Stack direction="vertical" gap={6}>
+                    <StepPanel
+                      key={activeStep}
+                      step={currentStep}
+                      direction={direction}
+                    >
+                      {activeStep === "intro" && <IntroStep />}
 
-                  <form onSubmit={handleSubmit} noValidate>
-                    <Stack direction="vertical" gap={6}>
-                      <TicketSelection
-                        ticketLines={ticketLines}
-                        savingsOpportunities={savingsOpportunities}
-                        seatCount={seatCount}
-                        total={total}
-                        isDisabled={isSubmitting}
-                        onCountChange={updateTicketCount}
-                      />
-
-                      <BuyerDetailsFields
-                        values={buyerDetails}
-                        errors={fieldErrors}
-                        isDisabled={isSubmitting}
-                        onChange={updateBuyerField}
-                      />
-
-                      <PaymentPanel
-                        total={total}
-                        receipt={receipt}
-                        receiptError={receiptError}
-                        isDisabled={isSubmitting}
-                        onReceiptChange={(file) => {
-                          setReceiptError(null);
-                          setReceipt(file);
-                        }}
-                      />
-
-                      <SubmitBar total={total} stage={stage} />
-
-                      {formError && (
-                        <Banner
-                          status="error"
-                          title="Unable to submit"
-                          description={formError}
+                      {activeStep === "seats" && (
+                        <SeatsStep
+                          ticketLines={ticketLines}
+                          savingsOpportunities={savingsOpportunities}
+                          seatCount={seatCount}
+                          total={total}
+                          error={errors.seats}
+                          isDisabled={isSubmitting}
+                          onCountChange={updateTicketCount}
                         />
                       )}
 
-                      <Text type="supporting">
-                        Your order remains pending until the payment has been
-                        manually verified. Tickets and the invoice will be sent
-                        by email.
-                      </Text>
-                    </Stack>
-                  </form>
-                </Stack>
+                      {activeStep === "details" && (
+                        <PersonalInfoStep
+                          values={buyerDetails}
+                          errors={errors.buyer}
+                          isDisabled={isSubmitting}
+                          onChange={updateBuyerField}
+                        />
+                      )}
+
+                      {activeStep === "payment" && (
+                        <PaymentStep
+                          buyerDetails={buyerDetails}
+                          ticketLines={ticketLines}
+                          seatCount={seatCount}
+                          total={total}
+                          receipt={receipt}
+                          receiptError={errors.receipt}
+                          isDisabled={isSubmitting}
+                          onReceiptChange={(file) => {
+                            setReceipt(file);
+                            setErrors((current) => ({ ...current, receipt: null }));
+                          }}
+                        />
+                      )}
+                    </StepPanel>
+
+                    <StepNav
+                      currentStep={currentStep}
+                      previousStep={previousStep}
+                      nextStep={nextStep}
+                      stage={stage}
+                      onPrevious={() =>
+                        previousStep && goToStep(previousStep.id, "back")
+                      }
+                    />
+                  </Stack>
+                </form>
               </div>
-            </Card>
+            </div>
           </Stack>
         </div>
       </div>

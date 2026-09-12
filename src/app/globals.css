@@ -18,9 +18,30 @@ body {
  * ------------------------------------------------------------------------ */
 
 .ssw-page {
+  /*
+   * The hero's geometry lives here so the fixed photo, the spacer that
+   * reserves room for it, and the scroll runway can never drift apart.
+   * It shrinks on short viewports (landscape tablets) so the photo is never
+   * taller than the screen it sits on.
+   */
+  --ssw-hero-height: min(620px, 82dvh);
+  --ssw-hero-overlap: 120px;
+
+  /* Scroll progress (0 -> 1), published by <HeroParallax /> and read by every
+   * layer below, including the sheet's shadow. */
+  --hero-p: 0;
+
   position: relative;
   min-height: 100dvh;
   isolation: isolate;
+}
+
+/*
+ * Reserves the visible part of the hero. The sheet starts where this ends,
+ * which is exactly one overlap short of the photo's bottom edge.
+ */
+.ssw-hero-spacer {
+  min-height: calc(var(--ssw-hero-height) - var(--ssw-hero-overlap));
 }
 
 /*
@@ -28,14 +49,15 @@ body {
  * Every layer below reads from it, so the whole effect lives in CSS.
  */
 .ssw-hero {
-  --hero-p: 0;
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;
-  height: var(--ssw-hero-height, 520px);
+  height: var(--ssw-hero-height);
   overflow: hidden;
   z-index: 0;
-  background-color: #0b1119;
+  /* Whatever the dissolve does not cover has to be the page colour, so the
+   * hero is indistinguishable from the sheet once it has faded out. */
+  background-color: var(--color-background-body);
 }
 
 /*
@@ -57,7 +79,7 @@ body {
   background-position: center;
   /* Drift with the page, then spread outwards and soften as it gives way. */
   transform:
-    translate3d(0, calc(var(--hero-p) * 0.4 * var(--ssw-hero-height, 520px)), 0)
+    translate3d(0, calc(var(--hero-p) * 0.4 * var(--ssw-hero-height)), 0)
     scale(calc(1 + var(--hero-p) * 0.45));
   filter: blur(calc(var(--hero-p) * 12px));
   opacity: calc(1 - var(--hero-p) * 0.35);
@@ -101,8 +123,8 @@ body {
   background: radial-gradient(
     circle at 50% 46%,
     var(--color-background-body) 0%,
-    var(--color-background-body) calc(var(--hero-p) * 92%),
-    transparent calc(var(--hero-p) * 150% + 8%)
+    var(--color-background-body) calc(var(--hero-p) * 145%),
+    transparent calc(var(--hero-p) * 195% + 6%)
   );
 }
 
@@ -110,6 +132,7 @@ body {
   position: relative;
   z-index: 1;
   /* Clears out ahead of the image so the frame is empty when the sheet lands. */
+  margin-inline: auto;
   opacity: calc(1 - var(--hero-p) * 1.9);
   transform: translate3d(0, calc(var(--hero-p) * -48px), 0);
   will-change: transform, opacity;
@@ -120,18 +143,44 @@ body {
   color: #f7f4ed;
 }
 
+.ssw-hero__quote {
+  margin: 0;
+  padding-block-start: 12px;
+  border-block-start: 1px solid rgba(247, 244, 237, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .ssw-scroller {
   position: relative;
   z-index: 1;
+  /*
+   * The scroll the sheet gives back by holding itself down. Padding, not a
+   * margin on the sheet: a last child's bottom margin can collapse out of the
+   * scrollable height, which would cut the runway short and strand the photo
+   * half-dissolved at the bottom of the page.
+   */
+  padding-block-end: var(--ssw-handoff-extra);
 }
 
+/*
+ * No top border: a 1px rule here reads as a hairline straight across the
+ * viewport. The colour change plus the lifted shadow define the edge on their
+ * own. min-height guarantees there is always a full screen of sheet to scroll
+ * through, so the hero can always be pushed completely off — on a wide desktop
+ * a short step would otherwise leave the page too short to scroll that far.
+ */
 .ssw-sheet {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
   background: var(--color-background-body);
-  border-block-start: 1px solid var(--color-border);
-  border-start-start-radius: 28px;
-  border-start-end-radius: 28px;
-  box-shadow: 0 -30px 70px -24px rgba(0, 0, 0, 0.6);
+  border-start-start-radius: calc(28px * (1 - var(--hero-p)));
+  border-start-end-radius: calc(28px * (1 - var(--hero-p)));
+  box-shadow: 0 -26px 60px -30px rgba(0, 0, 0, calc(0.55 * (1 - var(--hero-p))));
   padding-inline: 16px;
   padding-block: 32px 64px;
 }
@@ -144,29 +193,285 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
- * Order panel
+ * Folder tabs
+ *
+ * No borders anywhere in here. The active tab and the panel are painted the
+ * same colour and overlap by a pixel, so they read as one open folder — an
+ * outline round the panel would cut straight between them, which is loudest
+ * in dark mode where the border is a light line on a dark surface.
  * ------------------------------------------------------------------------ */
 
-.ssw-panel-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+.ssw-folder {
+  width: 100%;
 }
 
-@media (min-width: 1024px) {
-  .ssw-panel-grid {
-    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+.ssw-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  /* Flush with the panel edge on a phone, where every pixel of width counts. */
+  padding-inline: 0;
+  margin-block-end: -1px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+@media (min-width: 640px) {
+  .ssw-tabs {
+    gap: 4px;
+    padding-inline: 20px;
   }
 }
 
-.ssw-panel-aside {
-  background: var(--color-background-muted);
-  border-block-end: 1px solid var(--color-border);
+.ssw-tabs::-webkit-scrollbar {
+  display: none;
 }
 
-@media (min-width: 1024px) {
-  .ssw-panel-aside {
-    border-block-end: 0;
-    border-inline-end: 1px solid var(--color-border);
+.ssw-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 10px 14px 11px;
+  border: 0;
+  border-start-start-radius: 12px;
+  border-start-end-radius: 12px;
+  background: var(--color-background-muted);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    padding-block 180ms ease;
+}
+
+@media (min-width: 640px) {
+  .ssw-tab {
+    padding-inline: 16px;
+  }
+}
+
+/*
+ * No ring on focus, press or tap. The colour shift below is the whole
+ * affordance, so keyboard users still see which tab they are on.
+ */
+.ssw-tab:focus,
+.ssw-tab:focus-visible,
+.ssw-tab:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.ssw-tab:hover:not(:disabled):not([data-active]),
+.ssw-tab:focus-visible:not(:disabled):not([data-active]) {
+  background: var(--color-tint-hover);
+  color: var(--color-text-primary);
+}
+
+.ssw-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The open folder: taller, and painted exactly the panel's colour. */
+.ssw-tab[data-active] {
+  padding-block: 14px 12px;
+  background: var(--color-background-card);
+  color: var(--color-text-primary);
+}
+
+.ssw-tab__number {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--color-border-emphasized);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.ssw-tab[data-active] .ssw-tab__number {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ssw-tab[data-complete] .ssw-tab__number {
+  background: var(--color-success);
+  color: var(--color-on-success);
+}
+
+/*
+ * Deliberately not an Astryx Card. Card paints its border and corners through
+ * StyleX, whose selectors carry a :not(#\#) specificity hack that a plain
+ * stylesheet rule cannot outrank — so the outline could not be removed and the
+ * tabs could never sit flush against it.
+ */
+.ssw-folder__body {
+  position: relative;
+  background: var(--color-background-card);
+  border-end-start-radius: var(--radius-container);
+  border-end-end-radius: var(--radius-container);
+  box-shadow: var(--shadow-high);
+  padding: 24px 20px 28px;
+}
+
+@media (min-width: 640px) {
+  .ssw-folder__body {
+    border-start-start-radius: var(--radius-container);
+    border-start-end-radius: var(--radius-container);
+    padding: 32px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Step transitions
+ * ------------------------------------------------------------------------ */
+
+@keyframes ssw-step-in-forward {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 0, 0);
+  }
+}
+
+@keyframes ssw-step-in-back {
+  from {
+    opacity: 0;
+    transform: translate3d(-28px, 0, 0);
+  }
+}
+
+.ssw-step-panel {
+  animation: ssw-step-in-forward 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.ssw-step-panel[data-direction="back"] {
+  animation-name: ssw-step-in-back;
+}
+
+.ssw-step-panel:focus {
+  outline: none;
+}
+
+/* Collapsed tiers get a card of their own so the accordion reads as a stack. */
+.ssw-tier {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  padding: 12px 20px;
+  background: var(--color-background-card);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.ssw-tier[data-open] {
+  border-color: var(--color-accent);
+  background: var(--color-background-muted);
+}
+
+.ssw-guide-number {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  margin-block-start: 1px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ---------------------------------------------------------------------------
+ * Success tick
+ * ------------------------------------------------------------------------ */
+
+@keyframes ssw-tick-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ssw-tick-pop {
+  0% {
+    transform: scale(0.82);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ssw-tick-halo {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  55% {
+    opacity: 0.28;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+.ssw-tick {
+  fill: none;
+  transform-origin: 50% 50%;
+  animation: ssw-tick-pop 520ms cubic-bezier(0.22, 0.61, 0.36, 1) 80ms both;
+}
+
+.ssw-tick__halo {
+  fill: var(--color-success);
+  transform-origin: 50% 50%;
+  animation: ssw-tick-halo 900ms ease-out 260ms both;
+}
+
+.ssw-tick__ring {
+  stroke: var(--color-success);
+  stroke-width: 3;
+  stroke-dasharray: 164;
+  stroke-dashoffset: 164;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  animation: ssw-tick-draw 620ms cubic-bezier(0.65, 0, 0.45, 1) 80ms forwards;
+}
+
+.ssw-tick__check {
+  stroke: var(--color-success);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 44;
+  stroke-dashoffset: 44;
+  animation: ssw-tick-draw 320ms cubic-bezier(0.65, 0, 0.45, 1) 620ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+el,
+  .ssw-tick,
+  .ssw-tick__halo {
+    animation: none;
+  }
+
+  .ssw-tick__ring,
+  .ssw-tick__check {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 }
 

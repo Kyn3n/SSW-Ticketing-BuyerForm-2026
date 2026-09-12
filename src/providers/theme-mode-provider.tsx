@@ -1,6 +1,7 @@
 "use client";
 
 import { Theme } from "@astryxdesign/core";
+import { ToastViewport } from "@astryxdesign/core/Toast";
 import {
   createContext,
   useContext,
@@ -44,6 +45,8 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     <ThemeModeContext.Provider value={{ mode, toggle }}>
       <Theme theme={sswTheme} mode={mode}>
         {children}
+        {/* Inside <Theme> so toasts inherit the app's tokens and mode. */}
+        <ToastViewport position="topEnd" />
       </Theme>
     </ThemeModeContext.Provider>
   );
