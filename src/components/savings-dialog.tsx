@@ -8,14 +8,13 @@ import {
   Stack,
   Text,
 } from "@astryxdesign/core";
+import { formatMyr, pluralizeBundles } from "@/data/mappers/helper";
 import {
-  formatMyr,
-  pluralizeBundles,
   TICKET_TYPE_KEYS,
   TICKET_TYPES,
   type SavingsOpportunity,
   type TicketType,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 
 type SavingsDialogProps = {
   isOpen: boolean;

@@ -1,13 +1,7 @@
 import { Button, Card, Divider, Stack, Text } from "@astryxdesign/core";
-import type { CompletedOrder } from "@/lib/orders";
-import {
-  formatMyr,
-  pluralizeBundles,
-  pluralizeTickets,
-  TICKET_TYPES,
-  type TicketLine,
-  type TicketType,
-} from "@/lib/tickets";
+import { formatMyr, pluralizeBundles, pluralizeTickets } from "@/data/mappers/helper";
+import type { CompletedOrder } from "@/types/order";
+import { TICKET_TYPES, type TicketLine, type TicketType } from "@/types/ticket";
 import { Eyebrow } from "./eyebrow";
 
 type OrderConfirmationProps = {

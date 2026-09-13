@@ -1,16 +1,14 @@
 import { Stack, Text } from "@astryxdesign/core";
+import { formatMyr, pluralizeBundles, pluralizeTickets } from "@/data/mappers/helper";
 import {
   BUNDLE_PAID_SEATS,
   BUNDLE_SIZE,
-  formatMyr,
-  pluralizeBundles,
-  pluralizeTickets,
   type SavingsOpportunity,
   type TicketCounts,
   type TicketLine,
   type TicketType,
   TICKET_TYPES,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 import { AccentNote } from "./accent-note";
 import { QuantityField } from "./quantity-field";
 

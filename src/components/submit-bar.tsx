@@ -1,6 +1,6 @@
 import { Button, Divider, Stack, Text } from "@astryxdesign/core";
-import type { SubmissionStage } from "@/lib/orders";
-import { formatMyr } from "@/lib/tickets";
+import { formatMyr } from "@/data/mappers/helper";
+import type { SubmissionStage } from "@/types/order";
 
 const PROGRESS_TEXT: Record<SubmissionStage, string> = {
   idle: "Submit payment for review",

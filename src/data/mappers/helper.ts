@@ -1,44 +1,14 @@
-/**
- * Ticket catalogue and the pricing rules that go with it.
- *
- * A bundle is 4 tickets for the price of 3, so every bundle is worth one free
- * ticket. Singles and bundles are tracked separately because the buyer picks
- * them separately — the totals below derive everything else.
- */
-export const TICKET_TYPES = {
-  normal: { label: "Normal", price: 40 },
-  vip: { label: "VIP", price: 60 },
-} as const;
-
-export const BUNDLE_SIZE = 4;
-export const BUNDLE_PAID_SEATS = 3;
-
-export type TicketType = keyof typeof TICKET_TYPES;
-
-export type TicketCounts = {
-  singleCount: number;
-  bundleCount: number;
-};
-
-export type TicketSelections = Record<TicketType, TicketCounts>;
-
-export type TicketLine = TicketCounts & {
-  seatCount: number;
-  subtotal: number;
-};
-
-export type SavingsOpportunity = {
-  bundleCount: number;
-  singlesConverted: number;
-  savings: number;
-};
-
-export const TICKET_TYPE_KEYS = Object.keys(TICKET_TYPES) as TicketType[];
-
-export const INITIAL_TICKET_SELECTIONS: TicketSelections = {
-  normal: { singleCount: 1, bundleCount: 0 },
-  vip: { singleCount: 0, bundleCount: 0 },
-};
+import type { CartPayload } from "@/types/order";
+import {
+  BUNDLE_PAID_SEATS,
+  BUNDLE_SIZE,
+  TICKET_TYPE_KEYS,
+  TICKET_TYPES,
+  type SavingsOpportunity,
+  type TicketLine,
+  type TicketSelections,
+  type TicketType,
+} from "@/types/ticket";
 
 export function formatMyr(amount: number) {
   return `RM ${amount.toLocaleString("en-MY")}`;
@@ -116,4 +86,14 @@ export function sumSeats(lines: Record<TicketType, TicketLine>) {
 
 export function sumTotal(lines: Record<TicketType, TicketLine>) {
   return TICKET_TYPE_KEYS.reduce((total, type) => total + lines[type].subtotal, 0);
+}
+
+/** Maps the buyer's single/bundle picks onto the backend's flat cart shape. */
+export function toCartPayload(ticketSelections: TicketSelections): CartPayload {
+  return {
+    normal: ticketSelections.normal.singleCount,
+    normal_bundle: ticketSelections.normal.bundleCount,
+    vip: ticketSelections.vip.singleCount,
+    vip_bundle: ticketSelections.vip.bundleCount,
+  };
 }

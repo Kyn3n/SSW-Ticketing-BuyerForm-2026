@@ -1,7 +1,7 @@
 import { FileInput, Grid, Stack, Text } from "@astryxdesign/core";
 import { toStatus } from "@/lib/buyer-validation";
-import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from "@/lib/orders";
-import { formatMyr } from "@/lib/tickets";
+import { formatMyr } from "@/data/mappers/helper";
+import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from "@/types/order";
 import { Eyebrow } from "./eyebrow";
 import { PaymentQr } from "./payment-qr";
 

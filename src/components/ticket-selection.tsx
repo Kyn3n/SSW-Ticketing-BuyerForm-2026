@@ -1,13 +1,12 @@
 import { Divider, Stack, Text } from "@astryxdesign/core";
+import { formatMyr, pluralizeTickets } from "@/data/mappers/helper";
 import {
-  formatMyr,
-  pluralizeTickets,
   TICKET_TYPE_KEYS,
   type SavingsOpportunity,
   type TicketCounts,
   type TicketLine,
   type TicketType,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 import { AccentNote } from "./accent-note";
 import { TicketTypeRow } from "./ticket-type-row";
 
