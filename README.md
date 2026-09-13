@@ -19,12 +19,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 The form expects the backend to expose:
 
-1. `POST {NEXT_PUBLIC_API_BASE_URL}/orders/initiate-upload` — validates file
-   metadata and returns a temporary upload URL plus a reference id.
-2. `PUT <uploadUrl>` — accepts the raw receipt image bytes and returns the
-   stored object's path.
-3. `POST {NEXT_PUBLIC_API_BASE_URL}/orders/create` — validates the buyer
-   details and receipt, and creates the pending order.
+1. `POST {NEXT_PUBLIC_API_BASE_URL}/api/v1/public/order/image` — body
+   `{ contentType }`, returns `{ imageUrl, imageUUID }`.
+2. `PUT <imageUrl>` — accepts the raw receipt image bytes.
+3. `POST {NEXT_PUBLIC_API_BASE_URL}/api/v1/public/order` — body
+   `{ email, name, phone, cart: { normal, normal_bundle, vip, vip_bundle }, screenshotImageId }`,
+   returns `{ ok, order: { id, status, seatCount } }`.
+
+`GET {NEXT_PUBLIC_API_BASE_URL}/api/v1/public/order/image/{imageUUID}` is also
+available to fetch the stored receipt back for preview, but the form does not
+currently call it.
 
 ## Checks
 

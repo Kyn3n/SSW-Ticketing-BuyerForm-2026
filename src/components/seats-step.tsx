@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { Banner, Divider, Stack, Text } from "@astryxdesign/core";
+import { formatMyr, pluralizeTickets } from "@/data/mappers/helper";
 import {
-  formatMyr,
-  pluralizeTickets,
   TICKET_TYPE_KEYS,
   type SavingsOpportunity,
   type TicketCounts,
   type TicketLine,
   type TicketType,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 import { AccentNote } from "./accent-note";
 import { TicketTierCollapsible } from "./ticket-tier-collapsible";
 

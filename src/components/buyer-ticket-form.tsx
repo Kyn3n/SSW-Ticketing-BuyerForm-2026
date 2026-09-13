@@ -4,12 +4,6 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Section, Stack, useToast } from "@astryxdesign/core";
 import type { BuyerFieldErrors } from "@/lib/buyer-validation";
 import {
-  submitOrder,
-  type BuyerDetails,
-  type CompletedOrder,
-  type SubmissionStage,
-} from "@/lib/orders";
-import {
   completedSteps,
   hasStepErrors,
   NO_STEP_ERRORS,
@@ -20,17 +14,21 @@ import {
   type StepErrors,
   type StepId,
 } from "@/lib/steps";
+import { submitOrder } from "@/services/api";
 import {
-  INITIAL_TICKET_SELECTIONS,
   sumSeats,
   sumTotal,
   toSavingsOpportunities,
   toTicketLines,
   withBundleSavingsApplied,
+} from "@/data/mappers/helper";
+import type { BuyerDetails, CompletedOrder, SubmissionStage } from "@/types/order";
+import {
+  INITIAL_TICKET_SELECTIONS,
   type TicketCounts,
   type TicketSelections,
   type TicketType,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 import { BrandHeader } from "./brand-header";
 import { HeroParallax } from "./hero-parallax";
 import { IntroStep } from "./intro-step";

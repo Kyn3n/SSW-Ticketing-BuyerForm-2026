@@ -1,15 +1,13 @@
 import { Card, Divider, FileInput, Grid, Stack, Text } from "@astryxdesign/core";
 import { toStatus } from "@/lib/buyer-validation";
-import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, type BuyerDetails } from "@/lib/orders";
+import { formatMyr, pluralizeBundles, pluralizeTickets } from "@/data/mappers/helper";
+import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, type BuyerDetails } from "@/types/order";
 import {
-  formatMyr,
-  pluralizeBundles,
-  pluralizeTickets,
   TICKET_TYPE_KEYS,
   TICKET_TYPES,
   type TicketLine,
   type TicketType,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 import { Eyebrow } from "./eyebrow";
 import { PaymentQr } from "./payment-qr";
 

@@ -1,5 +1,6 @@
 import { Card, Grid, Stack, Text } from "@astryxdesign/core";
-import { formatMyr, TICKET_TYPES } from "@/lib/tickets";
+import { formatMyr } from "@/data/mappers/helper";
+import { TICKET_TYPES } from "@/types/ticket";
 import { AccentNote } from "./accent-note";
 import { Eyebrow } from "./eyebrow";
 

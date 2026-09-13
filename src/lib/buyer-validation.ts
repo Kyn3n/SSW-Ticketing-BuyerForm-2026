@@ -1,5 +1,5 @@
 import type { InputStatus } from "@astryxdesign/core";
-import type { BuyerDetails } from "@/lib/orders";
+import type { BuyerDetails } from "@/types/order";
 
 export type BuyerFieldErrors = Partial<Record<keyof BuyerDetails, string>>;
 

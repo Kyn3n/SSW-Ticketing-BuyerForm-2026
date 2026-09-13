@@ -1,5 +1,5 @@
 import { validateBuyerDetails, type BuyerFieldErrors } from "@/lib/buyer-validation";
-import type { BuyerDetails } from "@/lib/orders";
+import type { BuyerDetails } from "@/types/order";
 
 export const STEP_IDS = ["intro", "seats", "details", "payment"] as const;
 

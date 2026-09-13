@@ -268,7 +268,13 @@ body {
 
 .ssw-tab:hover:not(:disabled):not([data-active]),
 .ssw-tab:focus-visible:not(:disabled):not([data-active]) {
-  background: var(--color-tint-hover);
+  /*
+   * --color-tint-hover is black in light mode / white in dark mode, meant to
+   * be mixed in at a low percentage the way Astryx's own components use it —
+   * not applied as a flat background, which is what was turning this solid
+   * black on hover in light mode.
+   */
+  background: color-mix(in srgb, var(--color-background-muted), var(--color-tint-hover) 8%);
   color: var(--color-text-primary);
 }
 

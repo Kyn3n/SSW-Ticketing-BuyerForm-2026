@@ -1,18 +1,16 @@
 "use client";
 
 import { Badge, Collapsible, Divider, Stack, Text } from "@astryxdesign/core";
+import { formatMyr, pluralizeBundles, pluralizeTickets } from "@/data/mappers/helper";
 import {
   BUNDLE_PAID_SEATS,
   BUNDLE_SIZE,
-  formatMyr,
-  pluralizeBundles,
-  pluralizeTickets,
   TICKET_TYPES,
   type SavingsOpportunity,
   type TicketCounts,
   type TicketLine,
   type TicketType,
-} from "@/lib/tickets";
+} from "@/types/ticket";
 import { AccentNote } from "./accent-note";
 import { QuantityField } from "./quantity-field";
 

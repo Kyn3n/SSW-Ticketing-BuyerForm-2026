@@ -1,5 +1,5 @@
 import { Button, Divider, Stack, Text } from "@astryxdesign/core";
-import type { SubmissionStage } from "@/lib/orders";
+import type { SubmissionStage } from "@/types/order";
 import type { StepDefinition } from "@/lib/steps";
 import { STEPS } from "@/lib/steps";
 

@@ -1,6 +1,6 @@
 import { Stack, TextInput } from "@astryxdesign/core";
 import { toStatus, type BuyerFieldErrors } from "@/lib/buyer-validation";
-import type { BuyerDetails } from "@/lib/orders";
+import type { BuyerDetails } from "@/types/order";
 import { AccentNote } from "./accent-note";
 
 type PersonalInfoStepProps = {
