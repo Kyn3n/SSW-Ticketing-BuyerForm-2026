@@ -1,5 +1,10 @@
 import axios from "axios";
-import { sumTotal, toCartPayload, toTicketLines } from "@/data/mappers/helper";
+import {
+  sumTotal,
+  toCartPayload,
+  toOrderReference,
+  toTicketLines,
+} from "@/data/mappers/helper";
 import type {
   BuyerDetails,
   CreateOrderResponse,
@@ -99,7 +104,8 @@ export async function submitOrder({
 
   return {
     id: created.order.orderId,
-    reference: created.order.orderId,
+    reference: toOrderReference(created.order.orderId),
+    email: buyerDetails.email,
     status: created.order.status,
     createdAt: new Date().toISOString(),
     ticketSelections: ticketLines,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Stack, Text } from "@astryxdesign/core";
 
 export const HERO_HEIGHT = 520;
@@ -28,10 +28,12 @@ const DISSOLVE_RUNWAY = (HERO_HEIGHT - HERO_OVERLAP) * 0.85;
  *
  * The scroll position is published as a single CSS custom property so the
  * whole effect is expressed in `globals.css` and no React state is touched
- * per frame.
+ * per frame. It lands on the document root rather than the hero element
+ * because the scrolling sheet has to read it too — it fades its own border
+ * and shadow out as the photo goes, so its rounded corners end up blending
+ * into a page background that now matches on both sides of the curve.
  */
 export function HeroParallax() {
-  const heroRef = useRef<HTMLDivElement>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -48,11 +50,10 @@ export function HeroParallax() {
   }, []);
 
   useEffect(() => {
-    const hero = heroRef.current;
-    if (!hero) return;
+    const root = document.documentElement;
 
     if (prefersReducedMotion) {
-      hero.style.setProperty("--hero-p", "0");
+      root.style.setProperty("--hero-p", "0");
       return;
     }
 
@@ -60,9 +61,8 @@ export function HeroParallax() {
 
     function update() {
       frame = 0;
-      if (!hero) return;
       const progress = Math.min(1, Math.max(0, window.scrollY / DISSOLVE_RUNWAY));
-      hero.style.setProperty("--hero-p", progress.toFixed(4));
+      root.style.setProperty("--hero-p", progress.toFixed(4));
     }
 
     function onScroll() {
@@ -77,12 +77,12 @@ export function HeroParallax() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
       if (frame) cancelAnimationFrame(frame);
+      root.style.removeProperty("--hero-p");
     };
   }, [prefersReducedMotion]);
 
   return (
     <div
-      ref={heroRef}
       className="ssw-hero"
       style={{
         ["--ssw-hero-height" as string]: `${HERO_HEIGHT}px`,

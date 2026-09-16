@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { Banner, Card, Section, Stack, Text } from "@astryxdesign/core";
+import { Banner, Card, Stack, Text } from "@astryxdesign/core";
 import {
   validateBuyerDetails,
   type BuyerFieldErrors,
@@ -14,7 +14,11 @@ import {
   toTicketLines,
   withBundleSavingsApplied,
 } from "@/data/mappers/helper";
-import type { BuyerDetails, CompletedOrder, SubmissionStage } from "@/types/order";
+import type {
+  BuyerDetails,
+  CompletedOrder,
+  SubmissionStage,
+} from "@/types/order";
 import {
   INITIAL_TICKET_SELECTIONS,
   type TicketCounts,
@@ -26,7 +30,7 @@ import { BuyerDetailsFields } from "./buyer-details-fields";
 import { EventPanel } from "./event-panel";
 import { Eyebrow } from "./eyebrow";
 import { HeroParallax, HERO_HEIGHT, HERO_OVERLAP } from "./hero-parallax";
-import { OrderConfirmation } from "./order-confirmation";
+import { OrderSuccess } from "./order-success";
 import { PaymentPanel } from "./payment-panel";
 import { SavingsDialog } from "./savings-dialog";
 import { SubmitBar } from "./submit-bar";
@@ -116,6 +120,9 @@ export function BuyerTicketForm() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The submit button stays interactive while it morphs through its stages,
+    // so a second submit (Enter, or a stray click) has to be refused here.
+    if (isSubmitting) return;
     setFormError(null);
 
     const errors = validateBuyerDetails(buyerDetails);
@@ -146,14 +153,6 @@ export function BuyerTicketForm() {
     void sendOrder();
   }
 
-  if (completedOrder) {
-    return (
-      <Section variant="transparent" minHeight="100dvh">
-        <OrderConfirmation order={completedOrder} onStartAnother={resetForm} />
-      </Section>
-    );
-  }
-
   return (
     <main className="ssw-page">
       <HeroParallax />
@@ -179,65 +178,73 @@ export function BuyerTicketForm() {
               elevation="high"
               style={{ overflow: "hidden" }}
             >
-              <div className="ssw-panel-grid">
-                <EventPanel />
+              {completedOrder ? (
+                <OrderSuccess
+                  order={completedOrder}
+                  onStartAnother={resetForm}
+                />
+              ) : (
+                <div className="ssw-panel-grid">
+                  <EventPanel />
 
-                <Stack direction="vertical" gap={6} padding={8} as="section">
-                  <Stack direction="vertical" gap={1}>
-                    <Eyebrow>Ticket order</Eyebrow>
-                    <Text type="display-3" as="h2">
-                      Buyer details
-                    </Text>
-                  </Stack>
-
-                  <form onSubmit={handleSubmit} noValidate>
-                    <Stack direction="vertical" gap={6}>
-                      <TicketSelection
-                        ticketLines={ticketLines}
-                        savingsOpportunities={savingsOpportunities}
-                        seatCount={seatCount}
-                        total={total}
-                        isDisabled={isSubmitting}
-                        onCountChange={updateTicketCount}
-                      />
-
-                      <BuyerDetailsFields
-                        values={buyerDetails}
-                        errors={fieldErrors}
-                        isDisabled={isSubmitting}
-                        onChange={updateBuyerField}
-                      />
-
-                      <PaymentPanel
-                        total={total}
-                        receipt={receipt}
-                        receiptError={receiptError}
-                        isDisabled={isSubmitting}
-                        onReceiptChange={(file) => {
-                          setReceiptError(null);
-                          setReceipt(file);
-                        }}
-                      />
-
-                      <SubmitBar total={total} stage={stage} />
-
-                      {formError && (
-                        <Banner
-                          status="error"
-                          title="Unable to submit"
-                          description={formError}
-                        />
-                      )}
-
-                      <Text type="supporting">
-                        Your order remains pending until the payment has been
-                        manually verified. Tickets and the invoice will be sent
-                        by email.
+                  <Stack direction="vertical" gap={6} padding={8} as="section">
+                    <Stack direction="vertical" gap={1}>
+                      <Eyebrow>Ticket order</Eyebrow>
+                      <Text type="display-3" as="h2">
+                        Buyer details
                       </Text>
                     </Stack>
-                  </form>
-                </Stack>
-              </div>
+
+                    <form onSubmit={handleSubmit} noValidate>
+                      <Stack direction="vertical" gap={6}>
+                        <TicketSelection
+                          ticketLines={ticketLines}
+                          savingsOpportunities={savingsOpportunities}
+                          seatCount={seatCount}
+                          total={total}
+                          isDisabled={isSubmitting}
+                          onCountChange={updateTicketCount}
+                        />
+
+                        <BuyerDetailsFields
+                          values={buyerDetails}
+                          errors={fieldErrors}
+                          isDisabled={isSubmitting}
+                          onChange={updateBuyerField}
+                        />
+
+                        <PaymentPanel
+                          total={total}
+                          receipt={receipt}
+                          receiptError={receiptError}
+                          isDisabled={isSubmitting}
+                          onReceiptChange={(file) => {
+                            setReceiptError(null);
+                            setReceipt(file);
+                          }}
+                          onReceiptError={setReceiptError}
+                        />
+
+                        <SubmitBar total={total} stage={stage} />
+
+                        {formError && (
+                          <Banner
+                            status="error"
+                            title="Unable to submit"
+                            description={formError}
+                          />
+                        )}
+
+                        <Text type="supporting">
+                          Your order remains pending until the payment has been
+                          manually verified. Tickets and the invoice will be
+                          sent by email.
+                        </Text>
+                      </Stack>
+                    </form>
+                  </Stack>
+                </div>
+              )}
             </Card>
           </Stack>
         </div>

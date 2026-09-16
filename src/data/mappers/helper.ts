@@ -97,3 +97,14 @@ export function toCartPayload(ticketSelections: TicketSelections): CartPayload {
     vip_bundle: ticketSelections.vip.bundleCount,
   };
 }
+
+/**
+ * The buyer-facing order reference: the first block of the order UUID, which
+ * is short enough to read out over the phone while staying unique enough for
+ * support to find the order. Falls back to the leading characters for ids
+ * that are not hyphenated.
+ */
+export function toOrderReference(orderId: string) {
+  const [firstBlock] = orderId.split("-");
+  return (firstBlock || orderId).slice(0, 8).toUpperCase();
+}

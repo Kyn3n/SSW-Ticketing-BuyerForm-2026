@@ -1,15 +1,13 @@
 "use client";
 
-import { Button, Stack, Text } from "@astryxdesign/core";
-import { useThemeMode } from "@/providers/theme-mode-provider";
+import { Stack, Text } from "@astryxdesign/core";
+import { ThemeModeToggle } from "./theme-mode-toggle";
 
 /**
  * Brand row that sits over the hero photo: mark, wordmark, and the mode
  * toggle in place of the old static "secure order form" caption.
  */
 export function BrandHeader() {
-  const { mode, toggle } = useThemeMode();
-
   return (
     <Stack
       as="header"
@@ -45,12 +43,7 @@ export function BrandHeader() {
         >
           Secure order form
         </Text>
-        <Button
-          label={mode === "dark" ? "Light mode" : "Dark mode"}
-          variant="secondary"
-          size="sm"
-          onClick={toggle}
-        />
+        <ThemeModeToggle />
       </Stack>
     </Stack>
   );

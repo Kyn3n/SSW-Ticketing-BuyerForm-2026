@@ -12,8 +12,12 @@ export type BuyerDetails = {
 };
 
 export type CompletedOrder = {
+  /** Full order UUID, kept for support lookups and never shown to the buyer. */
   id: string;
+  /** Short, buyer-facing prefix of `id`. */
   reference: string;
+  /** Where the tickets will be sent once the payment clears. */
+  email: string;
   status: string;
   createdAt: string;
   ticketSelections: Record<TicketType, TicketLine>;
@@ -39,6 +43,8 @@ export type CreateOrderResponse = {
     orderId: string;
     status: string;
     seatCount: number;
+    items: Array<{ package: string; quantity: number; seats: number }>;
+    seatsByTicketType: { normal: number; vip: number };
   };
 };
 

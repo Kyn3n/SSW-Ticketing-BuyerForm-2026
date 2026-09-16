@@ -1,9 +1,7 @@
-import { FileInput, Grid, Stack, Text } from "@astryxdesign/core";
-import { toStatus } from "@/lib/buyer-validation";
+import { Stack, Text } from "@astryxdesign/core";
 import { formatMyr } from "@/data/mappers/helper";
-import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from "@/types/order";
 import { Eyebrow } from "./eyebrow";
-import { PaymentQr } from "./payment-qr";
+import { ReceiptDropzone } from "./receipt-dropzone";
 
 type PaymentPanelProps = {
   total: number;
@@ -11,15 +9,17 @@ type PaymentPanelProps = {
   receiptError: string | null;
   isDisabled: boolean;
   onReceiptChange: (receipt: File | null) => void;
+  onReceiptError: (message: string) => void;
 };
 
-/** Payment instructions on the left, receipt dropzone on the right. */
+/** Payment instructions, then the receipt dropzone across the full width. */
 export function PaymentPanel({
   total,
   receipt,
   receiptError,
   isDisabled,
   onReceiptChange,
+  onReceiptError,
 }: PaymentPanelProps) {
   return (
     <Stack direction="vertical" gap={5} as="section">
@@ -46,24 +46,13 @@ export function PaymentPanel({
         </Stack>
       </Stack>
 
-      <Grid columns={{ minWidth: 240, max: 2 }} gap={4}>
-        <PaymentQr />
-        <FileInput
-          label="Payment receipt"
-          isLabelHidden
-          description="JPG, PNG, or WebP · Max 5 MB"
-          mode="dropzone"
-          accept={ACCEPTED_FILE_TYPES}
-          maxSize={MAX_FILE_SIZE}
-          isRequired
-          isDisabled={isDisabled}
-          value={receipt}
-          status={toStatus(receiptError)}
-          onChange={(files) =>
-            onReceiptChange(Array.isArray(files) ? (files[0] ?? null) : files)
-          }
-        />
-      </Grid>
+      <ReceiptDropzone
+        receipt={receipt}
+        error={receiptError}
+        isDisabled={isDisabled}
+        onChange={onReceiptChange}
+        onError={onReceiptError}
+      />
     </Stack>
   );
 }
