@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   output: "standalone",
+  allowedDevOrigins: ["niandepc.tailadd02d.ts.net"],
   images: {
     remotePatterns: [
       {
