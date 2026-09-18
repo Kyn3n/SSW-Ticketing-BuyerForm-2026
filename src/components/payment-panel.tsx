@@ -1,6 +1,7 @@
 import { Stack, Text } from "@astryxdesign/core";
 import { formatMyr } from "@/data/mappers/helper";
 import { Eyebrow } from "./eyebrow";
+import { PaymentQr } from "./payment-qr";
 import { ReceiptDropzone } from "./receipt-dropzone";
 
 type PaymentPanelProps = {
@@ -45,6 +46,8 @@ export function PaymentPanel({
           </Text>
         </Stack>
       </Stack>
+
+      <PaymentQr />
 
       <ReceiptDropzone
         receipt={receipt}

@@ -5,7 +5,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
       - '--build-arg'
       - 'NEXT_PUBLIC_API_BASE_URL=$_API_BASE_URL'
       - '-f'
@@ -17,7 +17,7 @@ steps:
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
     waitFor: ['build']
 
   # 3. Deploy the frontend to Cloud Run
@@ -26,14 +26,14 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'ssw-ticketing-2026'
-      - '--image=asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+      - 'ssw-ticketing-buyer-form-2026'
+      - '--image=asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
       - '--region=asia-southeast1'
       - '--allow-unauthenticated'
     waitFor: ['push']
 
 images:
-  - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+  - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
 
 options:
   logging: CLOUD_LOGGING_ONLY

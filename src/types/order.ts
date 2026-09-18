@@ -37,6 +37,10 @@ export type InitiateImageUploadResponse = {
   imageUUID: string;
 };
 
+export type PaymentQrResponse = {
+  imageUrl: string;
+};
+
 export type CreateOrderResponse = {
   ok: boolean;
   order: {

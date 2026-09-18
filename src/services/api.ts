@@ -10,6 +10,7 @@ import type {
   CreateOrderResponse,
   ErrorResponse,
   InitiateImageUploadResponse,
+  PaymentQrResponse,
   SubmissionStage,
 } from "@/types/order";
 import type { CompletedOrder } from "@/types/order";
@@ -57,6 +58,20 @@ async function uploadReceiptImage(
   }
 
   return imageUUID;
+}
+
+/** Fetches a freshly signed URL for the payment QR code image. */
+export async function getPaymentQr(): Promise<string> {
+  try {
+    const { data } = await apiClient.get<PaymentQrResponse>(
+      "/api/v1/public/payment-qr",
+    );
+    return data.imageUrl;
+  } catch (error) {
+    throw new Error(
+      getErrorMessage(error, "Unable to load the payment QR code."),
+    );
+  }
 }
 
 async function createOrder(
