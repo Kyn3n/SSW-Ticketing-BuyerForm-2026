@@ -42,7 +42,10 @@ next-env.d.ts
 node_modules/
 dist/
 
-# local ticketing mock data
-/data/mock-orders.json
-/public/mock-bucket/*
-!/public/mock-bucket/.gitkeep
+# .claude
+.claude
+AGENTS.md
+CLAUDE.md
+
+# documentation
+.docs*

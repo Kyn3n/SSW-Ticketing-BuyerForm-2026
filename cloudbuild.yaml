@@ -1,89 +1,39 @@
 steps:
-  # 1. Validate the migration graph offline — no DB needed, fails fast
-  - id: 'migration-check'
-    name: 'node:22.18'
-    entrypoint: /bin/sh
-    args:
-      - -c
-      - |
-        npm ci
-        npx prisma migration check
-
-  # 2. Build the image, tagged with the git tag that triggered this build
+  # 1. Build the image, tagged with the git tag that triggered this build
   - id: 'build'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_BASE_URL=$_API_BASE_URL'
       - '-f'
       - 'Dockerfile'
       - '.'
-    waitFor: ['migration-check']
 
-  # 3. Push the image into the cloud's own docker registry
+  # 2. Push the image into the cloud's own docker registry
   - id: 'push'
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+      - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
     waitFor: ['build']
 
-  # 4. Cloud SQL Auth Proxy sidecar (inline) + emit + migrate + verify
-  - id: 'migrate'
-    name: 'node:22.18'
-    entrypoint: /bin/sh
-    args:
-      - -c
-      - |
-        curl -sSL -o /usr/local/bin/cloud-sql-proxy \
-          https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.25.3/cloud-sql-proxy.linux.amd64
-        chmod +x /usr/local/bin/cloud-sql-proxy
-
-        /usr/local/bin/cloud-sql-proxy --port 5432 "$_CONN_NAME" > /tmp/proxy.log 2>&1 &
-        PROXY_PID=$$!
-
-        trap 'echo "----- proxy log (final) -----"; cat /tmp/proxy.log; echo "-----------------------------"' EXIT
-
-        for i in $(seq 1 10); do
-          (node -e "require('net').createConnection(5432,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))") && break
-          sleep 1
-        done
-
-        if ! kill -0 $$PROXY_PID 2>/dev/null; then
-          echo "Proxy process died before migration started."
-          exit 1
-        fi
-
-        npm ci
-        npx prisma contract emit
-        LATEST=$$(ls migrations/app | sort | tail -1)
-        npx prisma db migrate --to "$$LATEST" --confirm $_DB_NAME
-        npx prisma db verify
-    secretEnv: ['DATABASE_URL']
-    waitFor: ['build']
-
-    # 5. Deploy — only reached if migration + verify succeeded
+  # 3. Deploy the frontend to Cloud Run
   - id: 'deploy'
     name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
       - 'deploy'
-      - 'ssw-ticketing-2026'
-      - '--image=asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+      - 'ssw-ticketing-buyer-form-2026'
+      - '--image=asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
       - '--region=asia-southeast1'
-      - '--add-cloudsql-instances=$_CONN_NAME'
-      - '--set-secrets=DATABASE_URL=database-url-runtime:latest' # ,RESEND_API_KEY=resend-api-key:latest,QR_SIGNING_KEY=qr-signing-key:latest'
-      - '--no-allow-unauthenticated'
-    waitFor: ['push','migrate']
-
-availableSecrets:
-  secretManager:
-    - versionName: projects/$PROJECT_ID/secrets/database-url-migration/versions/latest
-      env: 'DATABASE_URL'
+      - '--allow-unauthenticated'
+    waitFor: ['push']
 
 images:
-  - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-2026/ssw-ticketing-2026:$TAG_NAME'
+  - 'asia-southeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kyn3n-ssw-ticketing-buyerform-2026/ssw-ticketing-buyer-form-2026:$TAG_NAME'
 
 options:
   logging: CLOUD_LOGGING_ONLY
