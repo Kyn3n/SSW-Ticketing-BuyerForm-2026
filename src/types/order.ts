@@ -3,6 +3,9 @@ import type { TicketLine, TicketType } from "@/types/ticket";
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 export const ACCEPTED_FILE_TYPES = "image/jpeg,image/png,image/webp";
 
+/** Country code shown as a fixed prefix beside the phone input; `BuyerDetails.phone` holds only the digits after it. */
+export const PHONE_COUNTRY_CODE = "60";
+
 export type SubmissionStage = "idle" | "preparing" | "uploading" | "creating";
 
 export type BuyerDetails = {

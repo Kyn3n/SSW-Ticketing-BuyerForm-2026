@@ -5,13 +5,14 @@ import {
   toOrderReference,
   toTicketLines,
 } from "@/data/mappers/helper";
-import type {
-  BuyerDetails,
-  CreateOrderResponse,
-  ErrorResponse,
-  InitiateImageUploadResponse,
-  PaymentQrResponse,
-  SubmissionStage,
+import {
+  PHONE_COUNTRY_CODE,
+  type BuyerDetails,
+  type CreateOrderResponse,
+  type ErrorResponse,
+  type InitiateImageUploadResponse,
+  type PaymentQrResponse,
+  type SubmissionStage,
 } from "@/types/order";
 import type { CompletedOrder } from "@/types/order";
 import type { TicketSelections } from "@/types/ticket";
@@ -83,7 +84,7 @@ async function createOrder(
     const { data } = await apiClient.post<CreateOrderResponse>("/api/v1/public/order", {
       email: buyerDetails.email,
       name: buyerDetails.name,
-      phone: buyerDetails.phone,
+      phone: PHONE_COUNTRY_CODE + buyerDetails.phone,
       cart: toCartPayload(ticketSelections),
       screenshotImageId,
     });

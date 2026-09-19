@@ -14,7 +14,7 @@ export function validateBuyerDetails(details: BuyerDetails): BuyerFieldErrors {
     errors.email = "Enter a valid email address.";
   }
 
-  if (!/^[+()\-\s\d]{7,24}$/.test(details.phone.trim())) {
+  if (!/^\d{7,11}$/.test(details.phone.trim())) {
     errors.phone = "Enter a valid phone number.";
   }
 

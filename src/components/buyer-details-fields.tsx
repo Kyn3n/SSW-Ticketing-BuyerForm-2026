@@ -1,6 +1,6 @@
 import { Grid, Stack, TextInput } from "@astryxdesign/core";
 import { toStatus, type BuyerFieldErrors } from "@/lib/buyer-validation";
-import type { BuyerDetails } from "@/types/order";
+import { PHONE_COUNTRY_CODE, type BuyerDetails } from "@/types/order";
 
 type BuyerDetailsFieldsProps = {
   values: BuyerDetails;
@@ -47,7 +47,8 @@ export function BuyerDetailsFields({
         />
         <TextInput
           label="Phone"
-          placeholder="+60 12 345 6789"
+          placeholder="123456789"
+          startIcon={<span>+{PHONE_COUNTRY_CODE}</span>}
           autoComplete="tel"
           isRequired
           htmlName="phone"
@@ -55,7 +56,7 @@ export function BuyerDetailsFields({
           value={values.phone}
           status={toStatus(errors.phone)}
           isDisabled={isDisabled}
-          onChange={(value) => onChange("phone", value)}
+          onChange={(value) => onChange("phone", value.replace(/\D/g, ""))}
         />
       </Grid>
     </Stack>
