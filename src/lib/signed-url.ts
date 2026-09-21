@@ -31,18 +31,6 @@ function getSignedUrlExpiryMs(url: string): number | null {
   return signedAtMs + expiresInSeconds * 1000;
 }
 
-/**
- * Whether a signed URL is expired, or close enough to it that using it now
- * would risk the request landing after expiry. Returns `true` (treat as
- * expired) when the expiry can't be determined at all, since refetching is
- * always safe while trusting a bad URL is not.
- */
-export function isSignedUrlExpired(url: string, safetyMarginMs = 5_000): boolean {
-  const expiresAtMs = getSignedUrlExpiryMs(url);
-  if (expiresAtMs === null) return true;
-  return Date.now() + safetyMarginMs >= expiresAtMs;
-}
-
 /** Milliseconds until a signed URL should be refreshed, floored at 0. */
 export function msUntilSignedUrlExpiry(url: string, safetyMarginMs = 5_000): number {
   const expiresAtMs = getSignedUrlExpiryMs(url);

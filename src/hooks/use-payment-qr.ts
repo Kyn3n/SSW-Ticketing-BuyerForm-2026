@@ -2,41 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPaymentQr } from "@/services/api";
-import { isSignedUrlExpired, msUntilSignedUrlExpiry } from "@/lib/signed-url";
+import { msUntilSignedUrlExpiry } from "@/lib/signed-url";
 
-const STORAGE_KEY = "ssw:payment-qr-url";
-
-/**
- * Module-scoped so every consumer of the hook shares one cache and one
- * in-flight request, instead of each mounted instance re-fetching the QR.
- */
-let cachedImageUrl: string | null = null;
+/** Module-scoped only to dedupe concurrent requests, never to cache the result. */
 let inFlightRequest: Promise<string> | null = null;
 
-function readCache(): string | null {
-  if (cachedImageUrl && !isSignedUrlExpired(cachedImageUrl)) return cachedImageUrl;
-
-  if (typeof window !== "undefined") {
-    const stored = window.sessionStorage.getItem(STORAGE_KEY);
-    if (stored && !isSignedUrlExpired(stored)) {
-      cachedImageUrl = stored;
-      return stored;
-    }
-  }
-
-  return null;
-}
-
-function writeCache(imageUrl: string) {
-  cachedImageUrl = imageUrl;
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, imageUrl);
-  } catch {
-    // Private browsing / storage quota — the in-memory cache still works.
-  }
-}
-
-/** Fetches once, sharing the same request across concurrent callers. */
 function fetchPaymentQr(): Promise<string> {
   if (!inFlightRequest) {
     inFlightRequest = getPaymentQr().finally(() => {
@@ -54,19 +24,16 @@ type UsePaymentQrResult = {
 };
 
 /**
- * Serves the payment QR from cache while its signed URL is still valid, and
- * only calls the endpoint again once it has expired (or is about to).
+ * Fetches a fresh payment QR on every mount, and again just before its signed
+ * URL expires, so a buyer who leaves the screen open still sees a scannable
+ * QR.
  */
 export function usePaymentQr(): UsePaymentQrResult {
-  // `sessionStorage` doesn't exist on the server, so the cache can only be
-  // read client-side, inside an effect — starting from `null` here keeps the
-  // first client render identical to the server-rendered HTML and avoids a
-  // hydration mismatch.
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const isMountedRef = useRef(true);
-  // No cached image and nothing has failed yet means a fetch is in flight.
+  // No image yet and nothing has failed yet means a fetch is in flight.
   const isLoading = imageUrl === null && error === null;
 
   useEffect(() => {
@@ -82,20 +49,9 @@ export function usePaymentQr(): UsePaymentQrResult {
   }, []);
 
   useEffect(() => {
-    const cached = readCache();
-    if (cached) {
-      // Syncing from a browser-only external store (sessionStorage) on
-      // mount, which can only happen after hydration — there is no
-      // render-time equivalent that would keep SSR output in sync.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setImageUrl(cached);
-      return;
-    }
-
     fetchPaymentQr()
       .then((freshUrl) => {
         if (!isMountedRef.current) return;
-        writeCache(freshUrl);
         setImageUrl(freshUrl);
       })
       .catch((err: unknown) => {

@@ -1,17 +1,14 @@
 /**
- * Ticket catalogue and the pricing rules that go with it.
- *
- * A bundle is 4 tickets for the price of 3, so every bundle is worth one free
- * ticket. Singles and bundles are tracked separately because the buyer picks
- * them separately — the totals derive everything else (see mappers/helper.ts).
+ * Ticket catalogue. Singles and bundles are tracked separately because the
+ * buyer picks them separately — prices come from the backend's `/packages`
+ * endpoint and the totals derive everything else (see mappers/helper.ts).
  */
 export const TICKET_TYPES = {
-  normal: { label: "Normal", price: 40 },
-  vip: { label: "VIP", price: 60 },
+  normal: { label: "Normal" },
+  vip: { label: "VIP" },
 } as const;
 
 export const BUNDLE_SIZE = 4;
-export const BUNDLE_PAID_SEATS = 3;
 
 export type TicketType = keyof typeof TICKET_TYPES;
 
@@ -32,6 +29,12 @@ export type SavingsOpportunity = {
   singlesConverted: number;
   savings: number;
 };
+
+/** Per-ticket-type prices in ringgit, derived from the fetched package prices. */
+export type TicketPricing = Record<
+  TicketType,
+  { singlePrice: number; bundlePrice: number }
+>;
 
 export const TICKET_TYPE_KEYS = Object.keys(TICKET_TYPES) as TicketType[];
 

@@ -44,12 +44,15 @@ body {
 
 /*
  * Oversized so neither the parallax drift nor the outward spread exposes an
- * edge. The gradient stack sits under --ssw-hero-image as a fallback, so the
- * hero still looks deliberate if the photo never loads.
+ * edge. The buffer is biased toward the bottom: the downward drift only ever
+ * pushes the top edge closer to the frame (never the bottom), and the top is
+ * where the hero photo's own title art sits, so it keeps most of its room.
+ * The gradient stack sits under --ssw-hero-image as a fallback, so the hero
+ * still looks deliberate if the photo never loads.
  */
 .ssw-hero__media {
   position: absolute;
-  inset: -18% 0;
+  inset: -5% 0 -30% 0;
   background-color: #0b1119;
   background-image:
     var(--ssw-hero-image, none),

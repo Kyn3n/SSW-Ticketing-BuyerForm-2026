@@ -1,21 +1,18 @@
 import axios from "axios";
-import {
-  sumTotal,
-  toCartPayload,
-  toOrderReference,
-  toTicketLines,
-} from "@/data/mappers/helper";
+import { toCartPayload, toOrderReference } from "@/data/mappers/helper";
 import {
   PHONE_COUNTRY_CODE,
   type BuyerDetails,
   type CreateOrderResponse,
   type ErrorResponse,
   type InitiateImageUploadResponse,
+  type PackagePrice,
+  type PackagesResponse,
   type PaymentQrResponse,
   type SubmissionStage,
 } from "@/types/order";
 import type { CompletedOrder } from "@/types/order";
-import type { TicketSelections } from "@/types/ticket";
+import type { TicketLine, TicketSelections, TicketType } from "@/types/ticket";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
@@ -61,6 +58,18 @@ async function uploadReceiptImage(
   return imageUUID;
 }
 
+/** Fetches the current price of each package, in cents. */
+export async function getPackagePrices(): Promise<PackagePrice[]> {
+  try {
+    const { data } = await apiClient.get<PackagesResponse>(
+      "/api/v1/public/packages",
+    );
+    return data.packages;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Unable to load ticket prices."));
+  }
+}
+
 /** Fetches a freshly signed URL for the payment QR code image. */
 export async function getPaymentQr(): Promise<string> {
   try {
@@ -79,6 +88,7 @@ async function createOrder(
   buyerDetails: BuyerDetails,
   ticketSelections: TicketSelections,
   screenshotImageId: string,
+  paymentSum: number,
 ): Promise<CreateOrderResponse> {
   try {
     const { data } = await apiClient.post<CreateOrderResponse>("/api/v1/public/order", {
@@ -87,6 +97,7 @@ async function createOrder(
       phone: PHONE_COUNTRY_CODE + buyerDetails.phone,
       cart: toCartPayload(ticketSelections),
       screenshotImageId,
+      paymentSum,
     });
     return data;
   } catch (error) {
@@ -97,6 +108,10 @@ async function createOrder(
 type SubmitOrderInput = {
   buyerDetails: BuyerDetails;
   ticketSelections: TicketSelections;
+  ticketLines: Record<TicketType, TicketLine>;
+  total: number;
+  /** Cents; Σ(cart[package] × priceCents[package]) from the fetched package prices. */
+  paymentSum: number;
   receipt: File;
   onStageChange: (stage: SubmissionStage) => void;
 };
@@ -108,15 +123,21 @@ type SubmitOrderInput = {
 export async function submitOrder({
   buyerDetails,
   ticketSelections,
+  ticketLines,
+  total,
+  paymentSum,
   receipt,
   onStageChange,
 }: SubmitOrderInput): Promise<CompletedOrder> {
   const screenshotImageId = await uploadReceiptImage(receipt, onStageChange);
 
   onStageChange("creating");
-  const created = await createOrder(buyerDetails, ticketSelections, screenshotImageId);
-
-  const ticketLines = toTicketLines(ticketSelections);
+  const created = await createOrder(
+    buyerDetails,
+    ticketSelections,
+    screenshotImageId,
+    paymentSum,
+  );
 
   return {
     id: created.order.orderId,
@@ -126,6 +147,6 @@ export async function submitOrder({
     createdAt: new Date().toISOString(),
     ticketSelections: ticketLines,
     seatCount: created.order.seatCount,
-    amount: sumTotal(ticketLines),
+    amount: total,
   };
 }

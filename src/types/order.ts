@@ -35,6 +35,21 @@ export type CartPayload = {
   vip_bundle: number;
 };
 
+export type PackageName = "NORMAL" | "NORMAL_BUNDLE" | "VIP" | "VIP_BUNDLE";
+
+export type PackagePrice = {
+  name: PackageName;
+  priceCents: number;
+};
+
+export type PackagesResponse = {
+  ok: boolean;
+  packages: PackagePrice[];
+};
+
+/** Package prices in cents, keyed the same way as `CartPayload`. */
+export type PackagePriceMap = Record<keyof CartPayload, number>;
+
 export type InitiateImageUploadResponse = {
   imageUrl: string;
   imageUUID: string;

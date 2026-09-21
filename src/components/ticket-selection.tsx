@@ -5,6 +5,7 @@ import {
   type SavingsOpportunity,
   type TicketCounts,
   type TicketLine,
+  type TicketPricing,
   type TicketType,
 } from "@/types/ticket";
 import { AccentNote } from "./accent-note";
@@ -13,6 +14,7 @@ import { TicketTypeRow } from "./ticket-type-row";
 type TicketSelectionProps = {
   ticketLines: Record<TicketType, TicketLine>;
   savingsOpportunities: Record<TicketType, SavingsOpportunity>;
+  pricing: TicketPricing;
   seatCount: number;
   total: number;
   isDisabled: boolean;
@@ -27,6 +29,7 @@ type TicketSelectionProps = {
 export function TicketSelection({
   ticketLines,
   savingsOpportunities,
+  pricing,
   seatCount,
   total,
   isDisabled,
@@ -54,6 +57,7 @@ export function TicketSelection({
               type={type}
               line={ticketLines[type]}
               savings={savingsOpportunities[type]}
+              pricing={pricing[type]}
               isDisabled={isDisabled}
               canRemoveLastSeat={seatCount > 1}
               onCountChange={(field, value) => onCountChange(type, field, value)}

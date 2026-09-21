@@ -1,17 +1,22 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { Banner, Card, Stack, Text } from "@astryxdesign/core";
+import { Banner, Button, Card, Stack, Text } from "@astryxdesign/core";
 import {
   validateBuyerDetails,
   type BuyerFieldErrors,
 } from "@/lib/buyer-validation";
 import { submitOrder } from "@/services/api";
+import { usePackagePrices } from "@/hooks/use-package-prices";
 import {
+  computePaymentSum,
   sumSeats,
   sumTotal,
+  toCartPayload,
+  toPackagePriceMap,
   toSavingsOpportunities,
   toTicketLines,
+  toTicketPricing,
   withBundleSavingsApplied,
 } from "@/data/mappers/helper";
 import type {
@@ -55,13 +60,28 @@ export function BuyerTicketForm() {
     null,
   );
 
+  const {
+    prices,
+    isLoading: pricesLoading,
+    error: pricesError,
+    retry: retryPrices,
+  } = usePackagePrices();
+  const packagePriceMap = useMemo(
+    () => toPackagePriceMap(prices ?? []),
+    [prices],
+  );
+  const ticketPricing = useMemo(
+    () => toTicketPricing(packagePriceMap),
+    [packagePriceMap],
+  );
+
   const ticketLines = useMemo(
-    () => toTicketLines(ticketSelections),
-    [ticketSelections],
+    () => toTicketLines(ticketSelections, ticketPricing),
+    [ticketSelections, ticketPricing],
   );
   const savingsOpportunities = useMemo(
-    () => toSavingsOpportunities(ticketSelections),
-    [ticketSelections],
+    () => toSavingsOpportunities(ticketSelections, ticketPricing),
+    [ticketSelections, ticketPricing],
   );
   const seatCount = sumSeats(ticketLines);
   const total = sumTotal(ticketLines);
@@ -101,10 +121,18 @@ export function BuyerTicketForm() {
       return;
     }
 
+    const paymentSum = computePaymentSum(
+      toCartPayload(ticketSelections),
+      packagePriceMap,
+    );
+
     try {
       const order = await submitOrder({
         buyerDetails,
         ticketSelections,
+        ticketLines,
+        total,
+        paymentSum,
         receipt,
         onStageChange: setStage,
       });
@@ -131,6 +159,13 @@ export function BuyerTicketForm() {
 
     if (!receipt) {
       setReceiptError("Add your payment receipt before submitting.");
+      return;
+    }
+
+    if (pricesLoading || pricesError) {
+      setFormError(
+        "Ticket prices are still loading. Please wait a moment and try again.",
+      );
       return;
     }
 
@@ -197,12 +232,29 @@ export function BuyerTicketForm() {
 
                     <form onSubmit={handleSubmit} noValidate>
                       <Stack direction="vertical" gap={6}>
+                        {pricesError && (
+                          <Banner
+                            status="error"
+                            title="Unable to load ticket prices"
+                            description={pricesError}
+                            endContent={
+                              <Button
+                                label="Retry"
+                                variant="secondary"
+                                size="sm"
+                                onClick={retryPrices}
+                              />
+                            }
+                          />
+                        )}
+
                         <TicketSelection
                           ticketLines={ticketLines}
                           savingsOpportunities={savingsOpportunities}
+                          pricing={ticketPricing}
                           seatCount={seatCount}
                           total={total}
-                          isDisabled={isSubmitting}
+                          isDisabled={isSubmitting || pricesLoading}
                           onCountChange={updateTicketCount}
                         />
 

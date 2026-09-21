@@ -1,13 +1,12 @@
 import { Stack, Text } from "@astryxdesign/core";
 import { formatMyr, pluralizeBundles, pluralizeTickets } from "@/data/mappers/helper";
 import {
-  BUNDLE_PAID_SEATS,
   BUNDLE_SIZE,
+  TICKET_TYPES,
   type SavingsOpportunity,
   type TicketCounts,
   type TicketLine,
   type TicketType,
-  TICKET_TYPES,
 } from "@/types/ticket";
 import { AccentNote } from "./accent-note";
 import { QuantityField } from "./quantity-field";
@@ -16,6 +15,7 @@ type TicketTypeRowProps = {
   type: TicketType;
   line: TicketLine;
   savings: SavingsOpportunity;
+  pricing: { singlePrice: number; bundlePrice: number };
   isDisabled: boolean;
   canRemoveLastSeat: boolean;
   onCountChange: (field: keyof TicketCounts, value: number) => void;
@@ -26,12 +26,14 @@ export function TicketTypeRow({
   type,
   line,
   savings,
+  pricing,
   isDisabled,
   canRemoveLastSeat,
   onCountChange,
 }: TicketTypeRowProps) {
   const ticket = TICKET_TYPES[type];
-  const bundlePrice = ticket.price * BUNDLE_PAID_SEATS;
+  const { singlePrice, bundlePrice } = pricing;
+  const bundleSavings = BUNDLE_SIZE * singlePrice - bundlePrice;
 
   return (
     <Stack direction="vertical" gap={5}>
@@ -40,7 +42,7 @@ export function TicketTypeRow({
           <Text type="large" weight="semibold">
             {ticket.label}
           </Text>
-          <Text type="supporting">{formatMyr(ticket.price)} per paid ticket</Text>
+          <Text type="supporting">{formatMyr(singlePrice)} per paid ticket</Text>
         </Stack>
         <Stack direction="vertical" gap={0.5} hAlign="end">
           <Text type="supporting" justify="end">
@@ -55,7 +57,7 @@ export function TicketTypeRow({
       <Stack direction="vertical" gap={5}>
         <QuantityField
           label={`${ticket.label} singles`}
-          description={`${formatMyr(ticket.price)} each`}
+          description={`${formatMyr(singlePrice)} each`}
           value={line.singleCount}
           min={canRemoveLastSeat ? 0 : line.singleCount}
           isDisabled={isDisabled}
@@ -63,7 +65,7 @@ export function TicketTypeRow({
         />
         <QuantityField
           label={`${ticket.label} bundle`}
-          description={`${BUNDLE_SIZE} tickets for ${formatMyr(bundlePrice)} (save ${formatMyr(ticket.price)})`}
+          description={`${BUNDLE_SIZE} tickets for ${formatMyr(bundlePrice)} (save ${formatMyr(bundleSavings)})`}
           value={line.bundleCount}
           min={canRemoveLastSeat ? 0 : line.bundleCount}
           isDisabled={isDisabled}

@@ -3,17 +3,12 @@
 import { useEffect, useState } from "react";
 import { Stack, Text } from "@astryxdesign/core";
 
-export const HERO_HEIGHT = 520;
+export const HERO_HEIGHT = 500;
 /** How far the sheet of forms rides up over the bottom of the photo. */
-export const HERO_OVERLAP = 120;
+export const HERO_OVERLAP = 70;
 
-/**
- * Placeholder artwork so the scroll effect is visible before the real event
- * photo exists. Swap this one constant for the final asset (or a local
- * `/hero.jpg`) and nothing else needs to change.
- */
-const HERO_PLACEHOLDER_IMAGE =
-  'url("https://picsum.photos/seed/summer-soundwave/1800/1000")';
+/** Served from `public/`, so it ships with every build automatically. */
+const HERO_IMAGE = 'url("/ssw-banner.png")';
 
 /**
  * The image finishes dissolving slightly before the sheet of forms has fully
@@ -86,7 +81,7 @@ export function HeroParallax() {
       className="ssw-hero"
       style={{
         ["--ssw-hero-height" as string]: `${HERO_HEIGHT}px`,
-        ["--ssw-hero-image" as string]: HERO_PLACEHOLDER_IMAGE,
+        ["--ssw-hero-image" as string]: HERO_IMAGE,
       }}
     >
       <div className="ssw-hero__media" aria-hidden="true" />
@@ -108,9 +103,6 @@ export function HeroParallax() {
         </Text>
         <Text type="display-1" color="inherit" justify="center">
           Summer Soundwave
-        </Text>
-        <Text type="body" color="inherit" justify="center" style={{ opacity: 0.7 }}>
-          Placeholder artwork — scroll to hand over to the order form.
         </Text>
       </Stack>
     </div>
