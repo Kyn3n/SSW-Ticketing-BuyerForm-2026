@@ -26,7 +26,7 @@ export function BrandHeader() {
         </span>
         <Stack direction="vertical" gap={0}>
           <Text type="body" weight="semibold" color="inherit">
-            Summer Soundwave
+            Selangor Symphonic Winds
           </Text>
           <Text type="supporting" color="inherit" style={{ opacity: 0.65 }}>
             Official ticketing

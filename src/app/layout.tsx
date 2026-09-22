@@ -3,8 +3,8 @@ import { ThemeModeProvider } from "@/providers/theme-mode-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Summer Soundwave 2026 | Tickets",
-  description: "Purchase tickets for Summer Soundwave 2026.",
+  title: "Odyssey | Selangor Symphonic Winds Tickets",
+  description: "Purchase tickets for Odyssey by Selangor Symphonic Winds.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

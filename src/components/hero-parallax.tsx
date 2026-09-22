@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Stack, Text } from "@astryxdesign/core";
 
 export const HERO_HEIGHT = 500;
 /** How far the sheet of forms rides up over the bottom of the photo. */
@@ -9,6 +8,7 @@ export const HERO_OVERLAP = 70;
 
 /** Served from `public/`, so it ships with every build automatically. */
 const HERO_IMAGE = 'url("/ssw-banner.png")';
+const MOBILE_HERO_IMAGE = 'url("/ssw-banner-mobile.png")';
 
 /**
  * The image finishes dissolving slightly before the sheet of forms has fully
@@ -82,6 +82,7 @@ export function HeroParallax() {
       style={{
         ["--ssw-hero-height" as string]: `${HERO_HEIGHT}px`,
         ["--ssw-hero-image" as string]: HERO_IMAGE,
+        ["--ssw-hero-mobile-image" as string]: MOBILE_HERO_IMAGE,
       }}
     >
       <div className="ssw-hero__media" aria-hidden="true" />
@@ -89,22 +90,6 @@ export function HeroParallax() {
       <div className="ssw-hero__scrim" aria-hidden="true" />
       <div className="ssw-hero__dissolve" aria-hidden="true" />
 
-      <Stack
-        direction="vertical"
-        hAlign="center"
-        vAlign="center"
-        gap={3}
-        height="100%"
-        paddingInline={5}
-        className="ssw-hero__copy ssw-hero-overlay"
-      >
-        <Text type="supporting" color="inherit" className="ssw-eyebrow">
-          17 October 2026 &middot; Kuala Lumpur
-        </Text>
-        <Text type="display-1" color="inherit" justify="center">
-          Summer Soundwave
-        </Text>
-      </Stack>
     </div>
   );
 }

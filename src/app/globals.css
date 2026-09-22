@@ -71,6 +71,21 @@ body {
   will-change: transform, filter, opacity;
 }
 
+@media (max-width: 639px) {
+  .ssw-hero__media {
+    inset: 0;
+    background-image:
+      var(--ssw-hero-mobile-image, var(--ssw-hero-image, none)),
+      radial-gradient(58% 78% at 16% 6%, rgba(197, 144, 66, 0.5), transparent 62%),
+      radial-gradient(46% 68% at 84% 0%, rgba(96, 84, 176, 0.42), transparent 66%),
+      radial-gradient(120% 95% at 50% 118%, rgba(11, 17, 25, 0.96), rgba(11, 17, 25, 0.15) 62%),
+      linear-gradient(158deg, #1d2a43 0%, #101a29 58%, #0b1119 100%);
+    background-size: cover;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+    background-position: center, center, center, center, center;
+  }
+}
+
 .ssw-hero__beams {
   position: absolute;
   inset: 0;
@@ -147,6 +162,15 @@ body {
     rgba(0, 0, 0, calc(0.6 * (1 - var(--hero-p))));
   padding-inline: 16px;
   padding-block: 32px 64px;
+}
+
+.ssw-sheet__header {
+  width: min(100%, 1024px);
+  padding-block: 0 24px;
+}
+
+.ssw-sheet__header .ssw-hero-overlay {
+  color: var(--color-text-primary);
 }
 
 @media (min-width: 640px) {

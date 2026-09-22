@@ -4,7 +4,7 @@ import { Eyebrow } from "./eyebrow";
 
 const EVENT_FACTS = [
   { label: "Date", value: "17 October 2026" },
-  { label: "Venue", value: "The Foundry Hall, Kuala Lumpur" },
+  { label: "Venue", value: "SRJK(C) Chee Wen, USJ 1, Subang Jaya" },
   { label: "Doors open", value: "6:30 PM" },
 ];
 
@@ -22,11 +22,10 @@ export function EventPanel() {
 
       <Stack direction="vertical" gap={4}>
         <Text type="display-2" as="h1">
-          Summer Soundwave 2026
+          Odyssey
         </Text>
         <Text type="supporting" color="secondary">
-          An intimate evening of live music, crafted sound, and a room full of
-          people who came to listen.
+          A community concert by Selangor Symphonic Winds
         </Text>
       </Stack>
 

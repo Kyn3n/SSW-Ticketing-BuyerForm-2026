@@ -201,11 +201,13 @@ export function BuyerTicketForm() {
           paddingBlock={6}
           style={{ minHeight: HERO_HEIGHT - HERO_OVERLAP }}
         >
-          <BrandHeader />
         </Stack>
 
         <div className="ssw-sheet">
           <Stack direction="vertical" hAlign="center">
+            <div className="ssw-sheet__header">
+              <BrandHeader />
+            </div>
             <Card
               padding={0}
               width="100%"
