@@ -72,7 +72,7 @@ export function TicketSelection({
         <Text type="supporting">
           {seatCount} {pluralizeTickets(seatCount)} total
         </Text>
-        <Text type="large" weight="bold" hasTabularNumbers aria-live="polite">
+        <Text type="display-3" weight="bold" hasTabularNumbers aria-live="polite">
           {formatMyr(total)}
         </Text>
       </Stack>

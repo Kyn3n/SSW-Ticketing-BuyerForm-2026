@@ -54,6 +54,9 @@ export function BuyerTicketForm() {
   );
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [refundPolicyAcknowledged, setRefundPolicyAcknowledged] =
+    useState(false);
+  const [refundPolicyError, setRefundPolicyError] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [stage, setStage] = useState<SubmissionStage>("idle");
   const [showSavingsConfirmation, setShowSavingsConfirmation] = useState(false);
@@ -112,6 +115,8 @@ export function BuyerTicketForm() {
     setTicketSelections(INITIAL_TICKET_SELECTIONS);
     setReceipt(null);
     setReceiptError(null);
+    setRefundPolicyAcknowledged(false);
+    setRefundPolicyError(false);
     setFieldErrors({});
     setFormError(null);
   }
@@ -157,6 +162,11 @@ export function BuyerTicketForm() {
     const errors = validateBuyerDetails(buyerDetails);
     setFieldErrors(errors);
     if (Object.values(errors).some(Boolean)) return;
+
+    if (!refundPolicyAcknowledged) {
+      setRefundPolicyError(true);
+      return;
+    }
 
     if (!receipt) {
       setReceiptError("Add your payment receipt before submitting.");
@@ -269,7 +279,6 @@ export function BuyerTicketForm() {
                         />
 
                         <PaymentPanel
-                          total={total}
                           receipt={receipt}
                           receiptError={receiptError}
                           isDisabled={isSubmitting}
@@ -280,7 +289,14 @@ export function BuyerTicketForm() {
                           onReceiptError={setReceiptError}
                         />
 
-                        <RefundPolicy />
+                        <RefundPolicy
+                          isAcknowledged={refundPolicyAcknowledged}
+                          hasError={refundPolicyError}
+                          onAcknowledgementChange={(isAcknowledged) => {
+                            setRefundPolicyAcknowledged(isAcknowledged);
+                            setRefundPolicyError(false);
+                          }}
+                        />
 
                         <SubmitBar total={total} stage={stage} />
 

@@ -32,7 +32,7 @@ type UsePackagePricesResult = {
 export function usePackagePrices(): UsePackagePricesResult {
   // Reading the module-scoped cache only inside an effect keeps the first
   // client render identical to the server-rendered HTML and avoids a
-  // hydration mismatch, same as `usePaymentQr`.
+  // Keep the initial client render aligned with the server during hydration.
   const [prices, setPrices] = useState<PackagePrice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);

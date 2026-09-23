@@ -1,8 +1,18 @@
-import { Stack, Text } from "@astryxdesign/core";
+import { CheckboxInput, Stack, Text } from "@astryxdesign/core";
 import { Eyebrow } from "./eyebrow";
 
+type RefundPolicyProps = {
+  isAcknowledged: boolean;
+  hasError: boolean;
+  onAcknowledgementChange: (isAcknowledged: boolean) => void;
+};
+
 /** The buyer-facing policy shown immediately before order submission. */
-export function RefundPolicy() {
+export function RefundPolicy({
+  isAcknowledged,
+  hasError,
+  onAcknowledgementChange,
+}: RefundPolicyProps) {
   return (
     <Stack
       direction="vertical"
@@ -32,10 +42,26 @@ export function RefundPolicy() {
           or your order, please contact the PIC listed on this page.
         </Text>
         <Text type="supporting">
-          By submitting an order, you confirm that you have read and understood
-          this policy.
+          Please acknowledge this policy before submitting your order.
         </Text>
       </Stack>
+
+      <CheckboxInput
+        label="I have read and understood the ticket refund and inventory policy."
+        value={isAcknowledged}
+        size="sm"
+        className="ssw-refund-policy__checkbox"
+        htmlName="refund-policy-acknowledgement"
+        status={
+          hasError
+            ? {
+                type: "error",
+                message: "Acknowledge this policy before submitting your order.",
+              }
+            : undefined
+        }
+        onChange={onAcknowledgementChange}
+      />
     </Stack>
   );
 }
