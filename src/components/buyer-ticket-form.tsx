@@ -6,10 +6,11 @@ import {
   validateBuyerDetails,
   type BuyerFieldErrors,
 } from "@/lib/buyer-validation";
-import { submitOrder } from "@/services/api";
+import { InsufficientCapacityError, submitOrder } from "@/services/api";
 import { usePackagePrices } from "@/hooks/use-package-prices";
 import {
   computePaymentSum,
+  formatShortfallMessage,
   sumSeats,
   sumTotal,
   toCartPayload,
@@ -35,10 +36,12 @@ import { BuyerDetailsFields } from "./buyer-details-fields";
 import { EventPanel } from "./event-panel";
 import { Eyebrow } from "./eyebrow";
 import { HeroParallax, HERO_HEIGHT, HERO_OVERLAP } from "./hero-parallax";
+import { OrderFormSkeleton } from "./order-form-skeleton";
 import { OrderSuccess } from "./order-success";
 import { PaymentPanel } from "./payment-panel";
 import { RefundPolicy } from "./refund-policy";
 import { SavingsDialog } from "./savings-dialog";
+import { SoldOutNotice } from "./sold-out-notice";
 import { SubmitBar } from "./submit-bar";
 import { TicketSelection } from "./ticket-selection";
 
@@ -66,9 +69,11 @@ export function BuyerTicketForm() {
 
   const {
     prices,
+    seatsRemaining,
     isLoading: pricesLoading,
     error: pricesError,
     retry: retryPrices,
+    refresh: refreshPrices,
   } = usePackagePrices();
   const packagePriceMap = useMemo(
     () => toPackagePriceMap(prices ?? []),
@@ -92,6 +97,7 @@ export function BuyerTicketForm() {
   const availableSavings =
     savingsOpportunities.normal.savings + savingsOpportunities.vip.savings;
   const isSubmitting = stage !== "idle";
+  const isSoldOut = seatsRemaining.normal <= 0 && seatsRemaining.vip <= 0;
 
   function updateTicketCount(
     type: TicketType,
@@ -144,9 +150,16 @@ export function BuyerTicketForm() {
       });
       setCompletedOrder(order);
     } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Unable to submit your order.",
-      );
+      if (error instanceof InsufficientCapacityError) {
+        // Availability just changed underneath the buyer — refresh so the
+        // quantity fields reflect it instead of letting them retry blind.
+        refreshPrices();
+        setFormError(formatShortfallMessage(error.ticketTypes));
+      } else {
+        setFormError(
+          error instanceof Error ? error.message : "Unable to submit your order.",
+        );
+      }
     } finally {
       setStage("idle");
     }
@@ -236,85 +249,94 @@ export function BuyerTicketForm() {
                   <EventPanel />
 
                   <Stack direction="vertical" gap={6} padding={8} as="section">
-                    <Stack direction="vertical" gap={1}>
-                      <Eyebrow>Ticket order</Eyebrow>
-                      <Text type="display-3" as="h2">
-                        Buyer details
-                      </Text>
-                    </Stack>
+                    {pricesLoading ? (
+                      <OrderFormSkeleton />
+                    ) : isSoldOut ? (
+                      <SoldOutNotice />
+                    ) : (
+                      <>
+                        <Stack direction="vertical" gap={1}>
+                          <Eyebrow>Ticket order</Eyebrow>
+                          <Text type="display-3" as="h2">
+                            Buyer details
+                          </Text>
+                        </Stack>
 
-                    <form onSubmit={handleSubmit} noValidate>
-                      <Stack direction="vertical" gap={6}>
-                        {pricesError && (
-                          <Banner
-                            status="error"
-                            title="Unable to load ticket prices"
-                            description={pricesError}
-                            endContent={
-                              <Button
-                                label="Retry"
-                                variant="secondary"
-                                size="sm"
-                                onClick={retryPrices}
+                        <form onSubmit={handleSubmit} noValidate>
+                          <Stack direction="vertical" gap={6}>
+                            {pricesError && (
+                              <Banner
+                                status="error"
+                                title="Unable to load ticket prices"
+                                description={pricesError}
+                                endContent={
+                                  <Button
+                                    label="Retry"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={retryPrices}
+                                  />
+                                }
                               />
-                            }
-                          />
-                        )}
+                            )}
 
-                        <TicketSelection
-                          ticketLines={ticketLines}
-                          savingsOpportunities={savingsOpportunities}
-                          pricing={ticketPricing}
-                          seatCount={seatCount}
-                          total={total}
-                          isDisabled={isSubmitting || pricesLoading}
-                          onCountChange={updateTicketCount}
-                        />
+                            <TicketSelection
+                              ticketLines={ticketLines}
+                              savingsOpportunities={savingsOpportunities}
+                              pricing={ticketPricing}
+                              seatsRemaining={seatsRemaining}
+                              seatCount={seatCount}
+                              total={total}
+                              isDisabled={isSubmitting}
+                              onCountChange={updateTicketCount}
+                            />
 
-                        <BuyerDetailsFields
-                          values={buyerDetails}
-                          errors={fieldErrors}
-                          isDisabled={isSubmitting}
-                          onChange={updateBuyerField}
-                        />
+                            <BuyerDetailsFields
+                              values={buyerDetails}
+                              errors={fieldErrors}
+                              isDisabled={isSubmitting}
+                              onChange={updateBuyerField}
+                            />
 
-                        <PaymentPanel
-                          receipt={receipt}
-                          receiptError={receiptError}
-                          isDisabled={isSubmitting}
-                          onReceiptChange={(file) => {
-                            setReceiptError(null);
-                            setReceipt(file);
-                          }}
-                          onReceiptError={setReceiptError}
-                        />
+                            <PaymentPanel
+                              receipt={receipt}
+                              receiptError={receiptError}
+                              isDisabled={isSubmitting}
+                              onReceiptChange={(file) => {
+                                setReceiptError(null);
+                                setReceipt(file);
+                              }}
+                              onReceiptError={setReceiptError}
+                            />
 
-                        <RefundPolicy
-                          isAcknowledged={refundPolicyAcknowledged}
-                          hasError={refundPolicyError}
-                          onAcknowledgementChange={(isAcknowledged) => {
-                            setRefundPolicyAcknowledged(isAcknowledged);
-                            setRefundPolicyError(false);
-                          }}
-                        />
+                            <RefundPolicy
+                              isAcknowledged={refundPolicyAcknowledged}
+                              hasError={refundPolicyError}
+                              onAcknowledgementChange={(isAcknowledged) => {
+                                setRefundPolicyAcknowledged(isAcknowledged);
+                                setRefundPolicyError(false);
+                              }}
+                            />
 
-                        <SubmitBar total={total} stage={stage} />
+                            <SubmitBar total={total} stage={stage} />
 
-                        {formError && (
-                          <Banner
-                            status="error"
-                            title="Unable to submit"
-                            description={formError}
-                          />
-                        )}
+                            {formError && (
+                              <Banner
+                                status="error"
+                                title="Unable to submit"
+                                description={formError}
+                              />
+                            )}
 
-                        <Text type="supporting">
-                          Your order remains pending until the payment has been
-                          manually verified. Tickets and the invoice will be
-                          sent by email.
-                        </Text>
-                      </Stack>
-                    </form>
+                            <Text type="supporting">
+                              Your order remains pending until the payment has
+                              been manually verified. Tickets and the invoice
+                              will be sent by email.
+                            </Text>
+                          </Stack>
+                        </form>
+                      </>
+                    )}
                   </Stack>
                 </div>
               )}

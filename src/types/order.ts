@@ -42,10 +42,18 @@ export type PackagePrice = {
   priceCents: number;
 };
 
+export type TicketTypeName = "NORMAL" | "VIP";
+
+/** Seats left per ticket type, shared by a package and its bundle counterpart. */
+export type SeatsRemaining = Record<Lowercase<TicketTypeName>, number>;
+
 export type PackagesResponse = {
   ok: boolean;
   packages: PackagePrice[];
+  seatsRemaining: SeatsRemaining;
 };
+
+export type PackagesData = Pick<PackagesResponse, "packages" | "seatsRemaining">;
 
 /** Package prices in cents, keyed the same way as `CartPayload`. */
 export type PackagePriceMap = Record<keyof CartPayload, number>;
@@ -66,6 +74,15 @@ export type CreateOrderResponse = {
   };
 };
 
+/** One ticket type's shortfall detail on a 409 INSUFFICIENT_CAPACITY response. */
+export type TicketTypeShortfall = {
+  ticketType: TicketTypeName;
+  requestedSeats: number;
+  availableSeats: number;
+  sufficient: boolean;
+};
+
 export type ErrorResponse = {
   error?: string;
+  ticketTypes?: TicketTypeShortfall[];
 };

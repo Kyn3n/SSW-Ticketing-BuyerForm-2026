@@ -5,7 +5,9 @@ type QuantityFieldProps = {
   description: string;
   value: number;
   min?: number;
+  max?: number;
   isDisabled?: boolean;
+  disabledMessage?: string;
   onChange: (value: number) => void;
 };
 
@@ -18,7 +20,9 @@ export function QuantityField({
   description,
   value,
   min = 0,
+  max,
   isDisabled,
+  disabledMessage,
   onChange,
 }: QuantityFieldProps) {
   return (
@@ -38,9 +42,11 @@ export function QuantityField({
         isLabelHidden
         value={value}
         min={min}
+        max={max}
         isIntegerOnly
         hasNumberSteppers
         isDisabled={isDisabled}
+        disabledMessage={disabledMessage}
         size="lg"
         width={132}
         onChange={onChange}

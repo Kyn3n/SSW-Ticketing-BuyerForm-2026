@@ -1,5 +1,6 @@
 import { Divider, Stack, Text } from "@astryxdesign/core";
 import { formatMyr, pluralizeTickets } from "@/data/mappers/helper";
+import type { SeatsRemaining } from "@/types/order";
 import {
   TICKET_TYPE_KEYS,
   type SavingsOpportunity,
@@ -15,6 +16,7 @@ type TicketSelectionProps = {
   ticketLines: Record<TicketType, TicketLine>;
   savingsOpportunities: Record<TicketType, SavingsOpportunity>;
   pricing: TicketPricing;
+  seatsRemaining: SeatsRemaining;
   seatCount: number;
   total: number;
   isDisabled: boolean;
@@ -30,6 +32,7 @@ export function TicketSelection({
   ticketLines,
   savingsOpportunities,
   pricing,
+  seatsRemaining,
   seatCount,
   total,
   isDisabled,
@@ -58,6 +61,7 @@ export function TicketSelection({
               line={ticketLines[type]}
               savings={savingsOpportunities[type]}
               pricing={pricing[type]}
+              remainingSeats={seatsRemaining[type]}
               isDisabled={isDisabled}
               canRemoveLastSeat={seatCount > 1}
               onCountChange={(field, value) => onCountChange(type, field, value)}

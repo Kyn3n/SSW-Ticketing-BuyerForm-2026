@@ -6,9 +6,10 @@ import {
   type CreateOrderResponse,
   type ErrorResponse,
   type InitiateImageUploadResponse,
-  type PackagePrice,
+  type PackagesData,
   type PackagesResponse,
   type SubmissionStage,
+  type TicketTypeShortfall,
 } from "@/types/order";
 import type { CompletedOrder } from "@/types/order";
 import type { TicketLine, TicketSelections, TicketType } from "@/types/ticket";
@@ -23,6 +24,22 @@ function getErrorMessage(error: unknown, fallback = "Something went wrong.") {
     if (data?.error) return data.error;
   }
   return fallback;
+}
+
+/**
+ * Thrown when the backend rejects an order because one or more requested
+ * ticket types no longer have enough seats (either a real shortfall or a
+ * lost reservation race) — carries the fresh per-type breakdown so the form
+ * can tell the buyer exactly what's short.
+ */
+export class InsufficientCapacityError extends Error {
+  ticketTypes: TicketTypeShortfall[];
+
+  constructor(ticketTypes: TicketTypeShortfall[]) {
+    super("Not enough seats remain for one or more ticket types.");
+    this.name = "InsufficientCapacityError";
+    this.ticketTypes = ticketTypes;
+  }
 }
 
 /** Reserves an upload slot for the receipt and returns its stored image id. */
@@ -57,13 +74,13 @@ async function uploadReceiptImage(
   return imageUUID;
 }
 
-/** Fetches the current price of each package, in cents. */
-export async function getPackagePrices(): Promise<PackagePrice[]> {
+/** Fetches the current price of each package and remaining seats per ticket type. */
+export async function getPackagePrices(): Promise<PackagesData> {
   try {
     const { data } = await apiClient.get<PackagesResponse>(
       "/api/v1/public/packages",
     );
-    return data.packages;
+    return { packages: data.packages, seatsRemaining: data.seatsRemaining };
   } catch (error) {
     throw new Error(getErrorMessage(error, "Unable to load ticket prices."));
   }
@@ -86,6 +103,16 @@ async function createOrder(
     });
     return data;
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data as ErrorResponse | undefined;
+      if (
+        error.response?.status === 409 &&
+        data?.error === "INSUFFICIENT_CAPACITY" &&
+        data.ticketTypes
+      ) {
+        throw new InsufficientCapacityError(data.ticketTypes);
+      }
+    }
     throw new Error(getErrorMessage(error));
   }
 }

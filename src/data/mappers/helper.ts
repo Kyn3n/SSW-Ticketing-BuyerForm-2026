@@ -1,4 +1,10 @@
-import type { CartPayload, PackageName, PackagePrice, PackagePriceMap } from "@/types/order";
+import type {
+  CartPayload,
+  PackageName,
+  PackagePrice,
+  PackagePriceMap,
+  TicketTypeShortfall,
+} from "@/types/order";
 import {
   BUNDLE_SIZE,
   TICKET_TYPE_KEYS,
@@ -148,4 +154,24 @@ export function toCartPayload(ticketSelections: TicketSelections): CartPayload {
 export function toOrderReference(orderId: string) {
   const [firstBlock] = orderId.split("-");
   return (firstBlock || orderId).slice(0, 8).toUpperCase();
+}
+
+const SHORTFALL_TICKET_TYPE_LABELS: Record<TicketTypeShortfall["ticketType"], string> = {
+  NORMAL: "Normal",
+  VIP: "VIP",
+};
+
+/** Turns a 409 INSUFFICIENT_CAPACITY breakdown into a buyer-facing message. */
+export function formatShortfallMessage(ticketTypes: TicketTypeShortfall[]): string {
+  const shortfalls = ticketTypes.filter((entry) => !entry.sufficient);
+  if (shortfalls.length === 0) {
+    return "Seats sold out while you were checking out. Please adjust your order and try again.";
+  }
+
+  return shortfalls
+    .map((entry) => {
+      const label = SHORTFALL_TICKET_TYPE_LABELS[entry.ticketType];
+      return `${label}: only ${entry.availableSeats} ${pluralizeTickets(entry.availableSeats)} left (you requested ${entry.requestedSeats}).`;
+    })
+    .join(" ");
 }

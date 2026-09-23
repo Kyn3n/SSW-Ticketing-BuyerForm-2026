@@ -309,6 +309,29 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * Sold-out notice
+ *
+ * Takes over the form column only — the event panel stays put — once every
+ * ticket type has sold out.
+ * ------------------------------------------------------------------------ */
+
+.ssw-sold-out-panel {
+  text-align: center;
+}
+
+.ssw-sold-out-panel__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--color-background-muted);
+  color: var(--color-text-secondary);
+}
+
+.ssw-sold-out-panel__lede {
+  max-width: 46ch;
+}
+
+/* ---------------------------------------------------------------------------
  * Receipt dropzone
  *
  * One full-width area that is the file picker when empty and the receipt
