@@ -12,6 +12,7 @@ import type { CompletedOrder } from "@/types/order";
 import { TICKET_TYPES, type TicketLine, type TicketType } from "@/types/ticket";
 import { Eyebrow } from "./eyebrow";
 import { SuccessCheck } from "./success-check";
+import { SupportContact } from "./support-contact";
 
 /** How long the buyer should expect to wait before the tickets arrive. */
 const PROCESSING_DAYS = 3;
@@ -177,6 +178,10 @@ export function OrderSuccess({ order, onStartAnother }: OrderSuccessProps) {
               </Text>
             </SummaryRow>
           </Stack>
+        </motion.div>
+
+        <motion.div variants={ITEM} className="ssw-success-panel__contact">
+          <SupportContact />
         </motion.div>
 
         <motion.div variants={ITEM}>

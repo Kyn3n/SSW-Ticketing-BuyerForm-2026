@@ -37,6 +37,7 @@ import { Eyebrow } from "./eyebrow";
 import { HeroParallax, HERO_HEIGHT, HERO_OVERLAP } from "./hero-parallax";
 import { OrderSuccess } from "./order-success";
 import { PaymentPanel } from "./payment-panel";
+import { RefundPolicy } from "./refund-policy";
 import { SavingsDialog } from "./savings-dialog";
 import { SubmitBar } from "./submit-bar";
 import { TicketSelection } from "./ticket-selection";
@@ -278,6 +279,8 @@ export function BuyerTicketForm() {
                           }}
                           onReceiptError={setReceiptError}
                         />
+
+                        <RefundPolicy />
 
                         <SubmitBar total={total} stage={stage} />
 

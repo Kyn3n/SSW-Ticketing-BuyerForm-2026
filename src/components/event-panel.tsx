@@ -1,6 +1,7 @@
 import { Divider, Stack, Text } from "@astryxdesign/core";
 import { AccentNote } from "./accent-note";
 import { Eyebrow } from "./eyebrow";
+import { SupportContact } from "./support-contact";
 
 const EVENT_FACTS = [
   { label: "Date", value: "17 October 2026" },
@@ -47,6 +48,8 @@ export function EventPanel() {
       <AccentNote title="Manual verification">
         Tickets are issued by email after your receipt has been reviewed.
       </AccentNote>
+
+      <SupportContact />
     </Stack>
   );
 }
