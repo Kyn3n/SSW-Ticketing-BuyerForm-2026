@@ -262,6 +262,10 @@ body {
   align-items: flex-start;
 }
 
+.ssw-checkout-step {
+  width: 100%;
+}
+
 .ssw-brandmark {
   display: grid;
   place-items: center;

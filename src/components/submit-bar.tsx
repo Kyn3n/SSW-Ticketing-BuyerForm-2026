@@ -12,11 +12,21 @@ const PROGRESS_TEXT: Record<SubmissionStage, string> = {
 type SubmitBarProps = {
   total: number;
   stage: SubmissionStage;
+  mode?: "details" | "payment";
+  isCheckingAvailability?: boolean;
+  onBack?: () => void;
 };
 
 /** Order total and the submit action, split by the same rule as before. */
-export function SubmitBar({ total, stage }: SubmitBarProps) {
+export function SubmitBar({
+  total,
+  stage,
+  mode = "payment",
+  isCheckingAvailability = false,
+  onBack,
+}: SubmitBarProps) {
   const isSubmitting = stage !== "idle";
+  const isBusy = isSubmitting || isCheckingAvailability;
 
   return (
     <Stack direction="vertical" gap={5}>
@@ -34,14 +44,31 @@ export function SubmitBar({ total, stage }: SubmitBarProps) {
             {formatMyr(total)}
           </Text>
         </Stack>
-        <Button
-          type="submit"
-          label={PROGRESS_TEXT[stage]}
-          variant="primary"
-          size="lg"
-          isLoading={isSubmitting}
-          isDisabled={isSubmitting}
-        />
+        <Stack direction="horizontal" gap={3} wrap="wrap" justify="end">
+          {mode === "payment" && onBack && (
+            <Button
+              type="button"
+              label="Back to order details"
+              variant="secondary"
+              onClick={onBack}
+              isDisabled={isBusy}
+            />
+          )}
+          <Button
+            type="submit"
+            label={
+              mode === "details"
+                ? isCheckingAvailability
+                  ? "Checking availability..."
+                  : "Continue to payment"
+                : PROGRESS_TEXT[stage]
+            }
+            variant="primary"
+            size="lg"
+            isLoading={isBusy}
+            isDisabled={isBusy}
+          />
+        </Stack>
       </Stack>
     </Stack>
   );

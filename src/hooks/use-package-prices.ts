@@ -42,8 +42,8 @@ type UsePackagePricesResult = {
   isLoading: boolean;
   error: string | null;
   retry: () => void;
-  /** Forces a fresh fetch, bypassing the cache — use after a 409 to pick up newly-changed availability. */
-  refresh: () => void;
+  /** Forces a fresh fetch, bypassing the cache, and resolves with the latest data. */
+  refresh: () => Promise<PackagesState>;
 };
 
 /** Fetches package prices once per session and shares them across every consumer. */
@@ -69,10 +69,16 @@ export function usePackagePrices(): UsePackagePricesResult {
     setAttempt((n) => n + 1);
   }, []);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     cachedPackages = null;
     setError(null);
-    setAttempt((n) => n + 1);
+
+    const fresh = await fetchPackages();
+    if (isMountedRef.current) {
+      cachedPackages = fresh;
+      setPackages(fresh);
+    }
+    return fresh;
   }, []);
 
   useEffect(() => {

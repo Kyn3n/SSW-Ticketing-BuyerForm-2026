@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { Banner, Button, Card, Stack, Text } from "@astryxdesign/core";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   validateBuyerDetails,
   type BuyerFieldErrors,
@@ -23,10 +24,14 @@ import {
 import type {
   BuyerDetails,
   CompletedOrder,
+  SeatsRemaining,
   SubmissionStage,
+  TicketTypeShortfall,
 } from "@/types/order";
 import {
+  BUNDLE_SIZE,
   INITIAL_TICKET_SELECTIONS,
+  TICKET_TYPE_KEYS,
   type TicketCounts,
   type TicketSelections,
   type TicketType,
@@ -47,8 +52,27 @@ import { TicketSelection } from "./ticket-selection";
 
 const EMPTY_BUYER_DETAILS: BuyerDetails = { name: "", email: "", phone: "" };
 const PANEL_MAX_WIDTH = 1024;
+type CheckoutStep = "details" | "payment";
+
+const CHECKOUT_STEP_VARIANTS = {
+  hidden: (direction: 1 | -1) => ({
+    opacity: 0,
+    x: direction * 16,
+  }),
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
+  },
+  exit: (direction: 1 | -1) => ({
+    opacity: 0,
+    x: direction * -16,
+    transition: { duration: 0.16, ease: [0.4, 0, 1, 1] as const },
+  }),
+};
 
 export function BuyerTicketForm() {
+  const shouldReduceMotion = useReducedMotion();
   const [buyerDetails, setBuyerDetails] =
     useState<BuyerDetails>(EMPTY_BUYER_DETAILS);
   const [fieldErrors, setFieldErrors] = useState<BuyerFieldErrors>({});
@@ -60,6 +84,9 @@ export function BuyerTicketForm() {
   const [refundPolicyAcknowledged, setRefundPolicyAcknowledged] =
     useState(false);
   const [refundPolicyError, setRefundPolicyError] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details");
+  const [stepDirection, setStepDirection] = useState<1 | -1>(1);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [stage, setStage] = useState<SubmissionStage>("idle");
   const [showSavingsConfirmation, setShowSavingsConfirmation] = useState(false);
@@ -123,6 +150,9 @@ export function BuyerTicketForm() {
     setReceiptError(null);
     setRefundPolicyAcknowledged(false);
     setRefundPolicyError(false);
+    setCheckoutStep("details");
+    setStepDirection(1);
+    setIsCheckingAvailability(false);
     setFieldErrors({});
     setFormError(null);
   }
@@ -153,7 +183,7 @@ export function BuyerTicketForm() {
       if (error instanceof InsufficientCapacityError) {
         // Availability just changed underneath the buyer — refresh so the
         // quantity fields reflect it instead of letting them retry blind.
-        refreshPrices();
+        void refreshPrices().catch(() => undefined);
         setFormError(formatShortfallMessage(error.ticketTypes));
       } else {
         setFormError(
@@ -165,12 +195,82 @@ export function BuyerTicketForm() {
     }
   }
 
+  function reconcileSelections(nextSeatsRemaining: SeatsRemaining) {
+    const shortfalls: TicketTypeShortfall[] = [];
+    const nextSelections = { ...ticketSelections };
+
+    for (const type of TICKET_TYPE_KEYS) {
+      const current = ticketSelections[type];
+      const requestedSeats =
+        current.singleCount + current.bundleCount * BUNDLE_SIZE;
+      const availableSeats = Math.max(0, nextSeatsRemaining[type]);
+
+      if (requestedSeats > availableSeats) {
+        shortfalls.push({
+          ticketType: type.toUpperCase() as TicketTypeShortfall["ticketType"],
+          requestedSeats,
+          availableSeats,
+          sufficient: false,
+        });
+      }
+
+      const singleCount = Math.min(current.singleCount, availableSeats);
+      const bundleCount = Math.min(
+        current.bundleCount,
+        Math.floor(Math.max(0, availableSeats - singleCount) / BUNDLE_SIZE),
+      );
+      nextSelections[type] = { singleCount, bundleCount };
+    }
+
+    setTicketSelections(nextSelections);
+    return shortfalls;
+  }
+
+  async function checkAvailabilityAndContinue() {
+    setFormError(null);
+    setIsCheckingAvailability(true);
+
+    try {
+      const fresh = await refreshPrices();
+      const shortfalls = reconcileSelections(fresh.seatsRemaining);
+      if (shortfalls.length > 0) {
+        setFormError(formatShortfallMessage(shortfalls));
+        return;
+      }
+
+      if (availableSavings > 0) {
+        setShowSavingsConfirmation(true);
+      } else {
+        setStepDirection(1);
+        setCheckoutStep("payment");
+      }
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to check ticket availability. Please try again.",
+      );
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     // The submit button stays interactive while it morphs through its stages,
     // so a second submit (Enter, or a stray click) has to be refused here.
     if (isSubmitting) return;
     setFormError(null);
+
+    if (checkoutStep === "payment") {
+      if (!receipt) {
+        setReceiptError("Add your payment receipt before submitting.");
+        return;
+      }
+
+      void sendOrder();
+      return;
+    }
 
     const errors = validateBuyerDetails(buyerDetails);
     setFieldErrors(errors);
@@ -186,11 +286,6 @@ export function BuyerTicketForm() {
       return;
     }
 
-    if (!receipt) {
-      setReceiptError("Add your payment receipt before submitting.");
-      return;
-    }
-
     if (pricesLoading || pricesError) {
       setFormError(
         "Ticket prices are still loading. Please wait a moment and try again.",
@@ -198,23 +293,28 @@ export function BuyerTicketForm() {
       return;
     }
 
-    // Offer the cheaper equivalent basket before taking the payment.
-    if (availableSavings > 0) {
-      setShowSavingsConfirmation(true);
-      return;
-    }
-
-    void sendOrder();
+    void checkAvailabilityAndContinue();
   }
 
   function applyBundleSavings() {
     setTicketSelections(withBundleSavingsApplied);
     setShowSavingsConfirmation(false);
+    setStepDirection(1);
+    setCheckoutStep("payment");
   }
 
   function continueWithoutSavings() {
     setShowSavingsConfirmation(false);
-    void sendOrder();
+    setStepDirection(1);
+    setCheckoutStep("payment");
+  }
+
+  function returnToDetails() {
+    setStepDirection(-1);
+    setCheckoutStep("details");
+    setReceipt(null);
+    setReceiptError(null);
+    setFormError(null);
   }
 
   return (
@@ -261,9 +361,13 @@ export function BuyerTicketForm() {
                     ) : (
                       <>
                         <Stack direction="vertical" gap={1}>
-                          <Eyebrow>Ticket order</Eyebrow>
+                          <Eyebrow>
+                            {checkoutStep === "details" ? "Ticket order" : "Payment"}
+                          </Eyebrow>
                           <Text type="display-3" as="h2">
-                            Buyer details
+                            {checkoutStep === "details"
+                              ? "Buyer details"
+                              : "Complete your payment"}
                           </Text>
                         </Stack>
 
@@ -285,45 +389,78 @@ export function BuyerTicketForm() {
                               />
                             )}
 
-                            <TicketSelection
-                              ticketLines={ticketLines}
-                              savingsOpportunities={savingsOpportunities}
-                              pricing={ticketPricing}
-                              seatsRemaining={seatsRemaining}
-                              seatCount={seatCount}
-                              total={total}
-                              isDisabled={isSubmitting}
-                              onCountChange={updateTicketCount}
-                            />
+                            <AnimatePresence
+                              mode="wait"
+                              initial={false}
+                              custom={stepDirection}
+                            >
+                              <motion.div
+                                key={checkoutStep}
+                                className="ssw-checkout-step"
+                                custom={stepDirection}
+                                variants={CHECKOUT_STEP_VARIANTS}
+                                initial={shouldReduceMotion ? false : "hidden"}
+                                animate="visible"
+                                exit={shouldReduceMotion ? undefined : "exit"}
+                              >
+                                {checkoutStep === "details" ? (
+                                  <>
+                                <TicketSelection
+                                  ticketLines={ticketLines}
+                                  savingsOpportunities={savingsOpportunities}
+                                  pricing={ticketPricing}
+                                  seatsRemaining={seatsRemaining}
+                                  seatCount={seatCount}
+                                  total={total}
+                                  isDisabled={isSubmitting || isCheckingAvailability}
+                                  onCountChange={updateTicketCount}
+                                />
 
-                            <BuyerDetailsFields
-                              values={buyerDetails}
-                              errors={fieldErrors}
-                              isDisabled={isSubmitting}
-                              onChange={updateBuyerField}
-                            />
+                                <BuyerDetailsFields
+                                  values={buyerDetails}
+                                  errors={fieldErrors}
+                                  isDisabled={isSubmitting || isCheckingAvailability}
+                                  onChange={updateBuyerField}
+                                />
 
-                            <PaymentPanel
-                              receipt={receipt}
-                              receiptError={receiptError}
-                              isDisabled={isSubmitting}
-                              onReceiptChange={(file) => {
-                                setReceiptError(null);
-                                setReceipt(file);
-                              }}
-                              onReceiptError={setReceiptError}
-                            />
+                                <RefundPolicy
+                                  isAcknowledged={refundPolicyAcknowledged}
+                                  hasError={refundPolicyError}
+                                  onAcknowledgementChange={(isAcknowledged) => {
+                                    setRefundPolicyAcknowledged(isAcknowledged);
+                                    setRefundPolicyError(false);
+                                  }}
+                                />
 
-                            <RefundPolicy
-                              isAcknowledged={refundPolicyAcknowledged}
-                              hasError={refundPolicyError}
-                              onAcknowledgementChange={(isAcknowledged) => {
-                                setRefundPolicyAcknowledged(isAcknowledged);
-                                setRefundPolicyError(false);
-                              }}
-                            />
+                                <SubmitBar
+                                  total={total}
+                                  stage={stage}
+                                  mode="details"
+                                  isCheckingAvailability={isCheckingAvailability}
+                                />
+                                  </>
+                                ) : (
+                                  <>
+                                <PaymentPanel
+                                  receipt={receipt}
+                                  receiptError={receiptError}
+                                  isDisabled={isSubmitting}
+                                  onReceiptChange={(file) => {
+                                    setReceiptError(null);
+                                    setReceipt(file);
+                                  }}
+                                  onReceiptError={setReceiptError}
+                                />
 
-                            <SubmitBar total={total} stage={stage} />
+                                <SubmitBar
+                                  total={total}
+                                  stage={stage}
+                                  onBack={returnToDetails}
+                                />
+                                  </>
+                                )}
+                              </motion.div>
+                            </AnimatePresence>
 
                             {formError && (
                               <Banner
