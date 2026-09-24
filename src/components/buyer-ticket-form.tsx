@@ -176,6 +176,11 @@ export function BuyerTicketForm() {
     setFieldErrors(errors);
     if (Object.values(errors).some(Boolean)) return;
 
+    if (seatCount === 0) {
+      setFormError("Select at least one ticket before submitting.");
+      return;
+    }
+
     if (!refundPolicyAcknowledged) {
       setRefundPolicyError(true);
       return;

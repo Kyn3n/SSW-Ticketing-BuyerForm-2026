@@ -39,6 +39,6 @@ export type TicketPricing = Record<
 export const TICKET_TYPE_KEYS = Object.keys(TICKET_TYPES) as TicketType[];
 
 export const INITIAL_TICKET_SELECTIONS: TicketSelections = {
-  normal: { singleCount: 1, bundleCount: 0 },
+  normal: { singleCount: 0, bundleCount: 0 },
   vip: { singleCount: 0, bundleCount: 0 },
 };
