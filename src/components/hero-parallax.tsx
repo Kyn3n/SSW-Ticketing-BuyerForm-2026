@@ -7,8 +7,10 @@ export const HERO_HEIGHT = 500;
 export const HERO_OVERLAP = 70;
 
 /** Served from `public/`, so it ships with every build automatically. */
-const HERO_IMAGE = 'url("/ssw-banner.png")';
-const MOBILE_HERO_IMAGE = 'url("/ssw-banner-mobile.png")';
+const HERO_IMAGE =
+  'image-set(url("/ssw-banner.webp") type("image/webp"), url("/ssw-banner.png") type("image/png"))';
+const MOBILE_HERO_IMAGE =
+  'image-set(url("/ssw-banner-mobile.webp") type("image/webp"), url("/ssw-banner-mobile.png") type("image/png"))';
 
 /**
  * The image finishes dissolving slightly before the sheet of forms has fully
