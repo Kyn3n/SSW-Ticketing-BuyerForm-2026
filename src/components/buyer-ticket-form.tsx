@@ -25,7 +25,6 @@ import type {
   BuyerDetails,
   CompletedOrder,
   SeatsRemaining,
-  SubmissionStage,
   TicketTypeShortfall,
 } from "@/types/order";
 import {
@@ -84,11 +83,12 @@ export function BuyerTicketForm() {
   const [refundPolicyAcknowledged, setRefundPolicyAcknowledged] =
     useState(false);
   const [refundPolicyError, setRefundPolicyError] = useState(false);
+  const [seatCountError, setSeatCountError] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("details");
   const [stepDirection, setStepDirection] = useState<1 | -1>(1);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [stage, setStage] = useState<SubmissionStage>("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSavingsConfirmation, setShowSavingsConfirmation] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(
     null,
@@ -123,7 +123,6 @@ export function BuyerTicketForm() {
   const total = sumTotal(ticketLines);
   const availableSavings =
     savingsOpportunities.normal.savings + savingsOpportunities.vip.savings;
-  const isSubmitting = stage !== "idle";
   const isSoldOut = seatsRemaining.normal <= 0 && seatsRemaining.vip <= 0;
 
   function updateTicketCount(
@@ -135,6 +134,7 @@ export function BuyerTicketForm() {
       ...current,
       [type]: { ...current[type], [field]: Math.max(0, value) },
     }));
+    setSeatCountError(false);
   }
 
   function updateBuyerField(field: keyof BuyerDetails, value: string) {
@@ -150,11 +150,15 @@ export function BuyerTicketForm() {
     setReceiptError(null);
     setRefundPolicyAcknowledged(false);
     setRefundPolicyError(false);
+    setSeatCountError(false);
     setCheckoutStep("details");
     setStepDirection(1);
     setIsCheckingAvailability(false);
     setFieldErrors({});
     setFormError(null);
+    // Availability and prices may have moved on while the buyer was
+    // reviewing their receipt — bring the next order in fresh.
+    void refreshPrices().catch(() => undefined);
   }
 
   async function sendOrder() {
@@ -168,6 +172,7 @@ export function BuyerTicketForm() {
       packagePriceMap,
     );
 
+    setIsSubmitting(true);
     try {
       const order = await submitOrder({
         buyerDetails,
@@ -176,14 +181,19 @@ export function BuyerTicketForm() {
         total,
         paymentSum,
         receipt,
-        onStageChange: setStage,
       });
       setCompletedOrder(order);
     } catch (error) {
       if (error instanceof InsufficientCapacityError) {
-        // Availability just changed underneath the buyer — refresh so the
-        // quantity fields reflect it instead of letting them retry blind.
-        void refreshPrices().catch(() => undefined);
+        // Availability just changed underneath the buyer — refresh and
+        // reconcile so any now-sold-out type's counts drop back to 0
+        // instead of leaving the buyer to retry blind with a stale cart.
+        try {
+          const fresh = await refreshPrices();
+          reconcileSelections(fresh.seatsRemaining);
+        } catch {
+          // Keep the shortfall message below even if the refresh itself fails.
+        }
         setFormError(formatShortfallMessage(error.ticketTypes));
       } else {
         setFormError(
@@ -191,7 +201,7 @@ export function BuyerTicketForm() {
         );
       }
     } finally {
-      setStage("idle");
+      setIsSubmitting(false);
     }
   }
 
@@ -261,6 +271,7 @@ export function BuyerTicketForm() {
     // so a second submit (Enter, or a stray click) has to be refused here.
     if (isSubmitting) return;
     setFormError(null);
+    setSeatCountError(false);
 
     if (checkoutStep === "payment") {
       if (!receipt) {
@@ -277,7 +288,7 @@ export function BuyerTicketForm() {
     if (Object.values(errors).some(Boolean)) return;
 
     if (seatCount === 0) {
-      setFormError("Select at least one ticket before submitting.");
+      setSeatCountError(true);
       return;
     }
 
@@ -413,6 +424,7 @@ export function BuyerTicketForm() {
                                   seatCount={seatCount}
                                   total={total}
                                   isDisabled={isSubmitting || isCheckingAvailability}
+                                  hasSeatCountError={seatCountError}
                                   onCountChange={updateTicketCount}
                                 />
 
@@ -434,7 +446,7 @@ export function BuyerTicketForm() {
 
                                 <SubmitBar
                                   total={total}
-                                  stage={stage}
+                                  isSubmitting={isSubmitting}
                                   mode="details"
                                   isCheckingAvailability={isCheckingAvailability}
                                 />
@@ -454,7 +466,7 @@ export function BuyerTicketForm() {
 
                                 <SubmitBar
                                   total={total}
-                                  stage={stage}
+                                  isSubmitting={isSubmitting}
                                   onBack={returnToDetails}
                                 />
                                   </>

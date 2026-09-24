@@ -1,17 +1,9 @@
 import { Button, Divider, Stack, Text } from "@astryxdesign/core";
 import { formatMyr } from "@/data/mappers/helper";
-import type { SubmissionStage } from "@/types/order";
-
-const PROGRESS_TEXT: Record<SubmissionStage, string> = {
-  idle: "Submit payment for review",
-  preparing: "Preparing secure upload...",
-  uploading: "Uploading receipt...",
-  creating: "Creating order...",
-};
 
 type SubmitBarProps = {
   total: number;
-  stage: SubmissionStage;
+  isSubmitting: boolean;
   mode?: "details" | "payment";
   isCheckingAvailability?: boolean;
   onBack?: () => void;
@@ -20,12 +12,11 @@ type SubmitBarProps = {
 /** Order total and the submit action, split by the same rule as before. */
 export function SubmitBar({
   total,
-  stage,
+  isSubmitting,
   mode = "payment",
   isCheckingAvailability = false,
   onBack,
 }: SubmitBarProps) {
-  const isSubmitting = stage !== "idle";
   const isBusy = isSubmitting || isCheckingAvailability;
 
   return (
@@ -50,6 +41,7 @@ export function SubmitBar({
               type="button"
               label="Back to order details"
               variant="secondary"
+              size="lg"
               onClick={onBack}
               isDisabled={isBusy}
             />
@@ -61,7 +53,7 @@ export function SubmitBar({
                 ? isCheckingAvailability
                   ? "Checking availability..."
                   : "Continue to payment"
-                : PROGRESS_TEXT[stage]
+                : "Submit payment for review"
             }
             variant="primary"
             size="lg"

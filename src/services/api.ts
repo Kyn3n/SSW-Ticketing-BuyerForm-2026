@@ -8,7 +8,6 @@ import {
   type InitiateImageUploadResponse,
   type PackagesData,
   type PackagesResponse,
-  type SubmissionStage,
   type TicketTypeShortfall,
 } from "@/types/order";
 import type { CompletedOrder } from "@/types/order";
@@ -43,11 +42,7 @@ export class InsufficientCapacityError extends Error {
 }
 
 /** Reserves an upload slot for the receipt and returns its stored image id. */
-async function uploadReceiptImage(
-  receipt: File,
-  onStageChange: (stage: SubmissionStage) => void,
-): Promise<string> {
-  onStageChange("preparing");
+async function uploadReceiptImage(receipt: File): Promise<string> {
   let imageUrl: string;
   let imageUUID: string;
   try {
@@ -60,7 +55,6 @@ async function uploadReceiptImage(
     throw new Error(getErrorMessage(error));
   }
 
-  onStageChange("uploading");
   try {
     await axios.put(imageUrl, receipt, {
       headers: { "Content-Type": receipt.type },
@@ -125,7 +119,6 @@ type SubmitOrderInput = {
   /** Cents; Σ(cart[package] × priceCents[package]) from the fetched package prices. */
   paymentSum: number;
   receipt: File;
-  onStageChange: (stage: SubmissionStage) => void;
 };
 
 /**
@@ -139,11 +132,9 @@ export async function submitOrder({
   total,
   paymentSum,
   receipt,
-  onStageChange,
 }: SubmitOrderInput): Promise<CompletedOrder> {
-  const screenshotImageId = await uploadReceiptImage(receipt, onStageChange);
+  const screenshotImageId = await uploadReceiptImage(receipt);
 
-  onStageChange("creating");
   const created = await createOrder(
     buyerDetails,
     ticketSelections,

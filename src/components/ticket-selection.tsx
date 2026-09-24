@@ -1,4 +1,4 @@
-import { Divider, Stack, Text } from "@astryxdesign/core";
+import { Banner, Divider, Stack, Text } from "@astryxdesign/core";
 import { formatMyr, pluralizeTickets } from "@/data/mappers/helper";
 import type { SeatsRemaining } from "@/types/order";
 import {
@@ -20,6 +20,7 @@ type TicketSelectionProps = {
   seatCount: number;
   total: number;
   isDisabled: boolean;
+  hasSeatCountError: boolean;
   onCountChange: (
     type: TicketType,
     field: keyof TicketCounts,
@@ -36,6 +37,7 @@ export function TicketSelection({
   seatCount,
   total,
   isDisabled,
+  hasSeatCountError,
   onCountChange,
 }: TicketSelectionProps) {
   return (
@@ -63,7 +65,6 @@ export function TicketSelection({
               pricing={pricing[type]}
               remainingSeats={seatsRemaining[type]}
               isDisabled={isDisabled}
-              canRemoveLastSeat={seatCount > 1}
               onCountChange={(field, value) => onCountChange(type, field, value)}
             />
           </Stack>
@@ -71,6 +72,13 @@ export function TicketSelection({
       </Stack>
 
       <Divider />
+
+      {hasSeatCountError && (
+        <Banner
+          status="error"
+          title="Select at least one ticket before submitting."
+        />
+      )}
 
       <Stack direction="horizontal" justify="between" vAlign="center" gap={4}>
         <Text type="supporting">

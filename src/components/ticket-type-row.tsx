@@ -22,7 +22,6 @@ type TicketTypeRowProps = {
   /** Seats left for this ticket type, shared by its single and bundle SKUs. */
   remainingSeats: number;
   isDisabled: boolean;
-  canRemoveLastSeat: boolean;
   onCountChange: (field: keyof TicketCounts, value: number) => void;
 };
 
@@ -34,7 +33,6 @@ export function TicketTypeRow({
   pricing,
   remainingSeats,
   isDisabled,
-  canRemoveLastSeat,
   onCountChange,
 }: TicketTypeRowProps) {
   const ticket = TICKET_TYPES[type];
@@ -88,7 +86,7 @@ export function TicketTypeRow({
           label={`${ticket.label} singles`}
           description={`${formatMyr(singlePrice)} each`}
           value={line.singleCount}
-          min={canRemoveLastSeat ? 0 : line.singleCount}
+          min={0}
           max={maxSingleCount}
           isDisabled={isDisabled || isSoldOut}
           disabledMessage={isSoldOut ? "Sold out" : undefined}
@@ -98,7 +96,7 @@ export function TicketTypeRow({
           label={`${ticket.label} bundle`}
           description={`${BUNDLE_SIZE} tickets for ${formatMyr(bundlePrice)} (save ${formatMyr(bundleSavings)})`}
           value={line.bundleCount}
-          min={canRemoveLastSeat ? 0 : line.bundleCount}
+          min={0}
           max={maxBundleCount}
           isDisabled={isDisabled || isSoldOut}
           disabledMessage={isSoldOut ? "Sold out" : undefined}
