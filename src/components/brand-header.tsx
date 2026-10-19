@@ -7,7 +7,11 @@ import { ThemeModeToggle } from "./theme-mode-toggle";
  * Brand row that sits over the hero photo: mark, wordmark, and the mode
  * toggle in place of the old static "secure order form" caption.
  */
-export function BrandHeader() {
+export function BrandHeader({
+  caption = "Secure order form",
+}: {
+  caption?: string;
+}) {
   return (
     <Stack
       as="header"
@@ -41,7 +45,7 @@ export function BrandHeader() {
           className="ssw-eyebrow"
           style={{ opacity: 0.6 }}
         >
-          Secure order form
+          {caption}
         </Text>
         <ThemeModeToggle />
       </Stack>

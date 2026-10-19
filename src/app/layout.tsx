@@ -3,7 +3,7 @@ import { ThemeModeProvider } from "@/providers/theme-mode-provider";
 import "./globals.css";
 
 const title = "Odyssey | Selangor Symphonic Winds Tickets";
-const description = "Purchase tickets for Odyssey by Selangor Symphonic Winds.";
+const description = "Event information for Odyssey by Selangor Symphonic Winds.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(

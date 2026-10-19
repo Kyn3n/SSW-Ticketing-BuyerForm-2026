@@ -9,8 +9,12 @@ const EVENT_FACTS = [
   { label: "Doors open", value: "6:30 PM" },
 ];
 
-/** Left column of the order panel: what the buyer is actually paying for. */
-export function EventPanel() {
+/** Left column of the event panel, with optional ordering guidance. */
+export function EventPanel({
+  showOrderingInfo = true,
+}: {
+  showOrderingInfo?: boolean;
+}) {
   return (
     <Stack
       direction="vertical"
@@ -45,9 +49,11 @@ export function EventPanel() {
 
       <Divider />
 
-      <AccentNote title="Manual verification">
-        Tickets are issued by email after your receipt has been reviewed.
-      </AccentNote>
+      {showOrderingInfo && (
+        <AccentNote title="Manual verification">
+          Tickets are issued by email after your receipt has been reviewed.
+        </AccentNote>
+      )}
 
       <SupportContact />
     </Stack>
